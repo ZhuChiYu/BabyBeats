@@ -1,21 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, Dimensions, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, Dimensions, TouchableOpacity, Alert, Modal, Platform } from 'react-native';
 import { LineChart, BarChart, PieChart } from 'react-native-chart-kit';
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useBabyStore } from '../store/babyStore';
 import { FeedingService } from '../services/feedingService';
 import { SleepService } from '../services/sleepService';
 import { DiaperService } from '../services/diaperService';
 import { PumpingService } from '../services/pumpingService';
-import { format, subDays, startOfDay } from 'date-fns';
+import { format, subDays, startOfDay, endOfDay, differenceInDays } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import { Colors } from '../constants';
 
 const screenWidth = Dimensions.get('window').width;
 
-type TimeRange = '7days' | '14days' | '30days';
+type TimeRange = '7days' | '14days' | '30days' | '3months' | 'custom';
 
-export const StatsScreen: React.FC = () => {
+interface StatsScreenProps {
+  navigation: any;
+}
+
+export const StatsScreen: React.FC<StatsScreenProps> = ({ navigation }) => {
   const { getCurrentBaby } = useBabyStore();
   const currentBaby = getCurrentBaby();
   
@@ -25,39 +30,69 @@ export const StatsScreen: React.FC = () => {
   const [diaperData, setDiaperData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   
+  // 保存原始数据用于报告生成
+  const [rawFeedings, setRawFeedings] = useState<any[]>([]);
+  const [rawSleeps, setRawSleeps] = useState<any[]>([]);
+  const [rawDiapers, setRawDiapers] = useState<any[]>([]);
+  
+  // 自定义日期范围
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [datePickerMode, setDatePickerMode] = useState<'start' | 'end'>('start');
+  const [customStartDate, setCustomStartDate] = useState(startOfDay(subDays(new Date(), 6)));
+  const [customEndDate, setCustomEndDate] = useState(endOfDay(new Date()));
+  const [tempDate, setTempDate] = useState(new Date());
+  
   useEffect(() => {
     if (currentBaby) {
       loadStats();
     }
-  }, [currentBaby?.id, timeRange]);
+  }, [currentBaby?.id, timeRange, customStartDate, customEndDate]);
   
   const loadStats = async () => {
     if (!currentBaby) return;
     
     setLoading(true);
     try {
-      const days = timeRange === '7days' ? 7 : timeRange === '14days' ? 14 : 30;
-      const today = startOfDay(new Date());
-      const startDate = subDays(today, days - 1);
+      let startDate: Date;
+      let endDate: Date;
+      let days: number;
+      
+      if (timeRange === 'custom') {
+        startDate = customStartDate;
+        endDate = customEndDate;
+        days = differenceInDays(endDate, startDate) + 1;
+      } else {
+        days = timeRange === '7days' ? 7 : 
+               timeRange === '14days' ? 14 : 
+               timeRange === '3months' ? 90 : 30;
+        const today = startOfDay(new Date());
+        startDate = subDays(today, days - 1);
+        endDate = endOfDay(new Date());
+      }
       
       // 获取数据
       const feedings = await FeedingService.getByDateRange(
         currentBaby.id,
         startDate.getTime(),
-        Date.now()
+        endDate.getTime()
       );
       
       const sleeps = await SleepService.getByDateRange(
         currentBaby.id,
         startDate.getTime(),
-        Date.now()
+        endDate.getTime()
       );
       
       const diapers = await DiaperService.getByDateRange(
         currentBaby.id,
         startDate.getTime(),
-        Date.now()
+        endDate.getTime()
       );
+      
+      // 保存原始数据
+      setRawFeedings(feedings);
+      setRawSleeps(sleeps);
+      setRawDiapers(diapers);
       
       // 按日期分组统计
       const dateLabels: string[] = [];
@@ -66,7 +101,7 @@ export const StatsScreen: React.FC = () => {
       const diaperCounts: number[] = [];
       
       for (let i = days - 1; i >= 0; i--) {
-        const date = subDays(today, i);
+        const date = subDays(endDate, i);
         const dateStart = startOfDay(date).getTime();
         const dateEnd = dateStart + 24 * 60 * 60 * 1000 - 1;
         
@@ -108,6 +143,138 @@ export const StatsScreen: React.FC = () => {
     }
   };
   
+  const getDays = () => {
+    if (timeRange === 'custom') {
+      return differenceInDays(customEndDate, customStartDate) + 1;
+    }
+    return timeRange === '7days' ? 7 : 
+           timeRange === '14days' ? 14 : 
+           timeRange === '3months' ? 90 : 30;
+  };
+
+  // 计算图表宽度：每天至少50像素，最小为屏幕宽度
+  const getChartWidth = () => {
+    const days = getDays();
+    const minWidth = screenWidth - 48;
+    const dynamicWidth = days * 50;
+    return Math.max(minWidth, dynamicWidth);
+  };
+
+  // 处理日期选择
+  const handleDateChange = (event: any, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowDatePicker(false);
+    }
+    
+    if (selectedDate) {
+      setTempDate(selectedDate);
+      if (Platform.OS === 'ios') {
+        // iOS 不自动关闭，需要在确认按钮中处理
+        return;
+      }
+      confirmDateSelection(selectedDate);
+    }
+  };
+
+  const confirmDateSelection = (date: Date) => {
+    if (datePickerMode === 'start') {
+      const newStartDate = startOfDay(date);
+      if (newStartDate > customEndDate) {
+        Alert.alert('提示', '开始日期不能晚于结束日期');
+        return;
+      }
+      setCustomStartDate(newStartDate);
+    } else {
+      const newEndDate = endOfDay(date);
+      if (newEndDate < customStartDate) {
+        Alert.alert('提示', '结束日期不能早于开始日期');
+        return;
+      }
+      setCustomEndDate(newEndDate);
+    }
+    setShowDatePicker(false);
+  };
+
+  const openDatePicker = (mode: 'start' | 'end') => {
+    setDatePickerMode(mode);
+    setTempDate(mode === 'start' ? customStartDate : customEndDate);
+    setShowDatePicker(true);
+  };
+
+  const handleTimeRangeChange = (range: TimeRange) => {
+    setTimeRange(range);
+  };
+
+  const getDateRangeText = () => {
+    if (timeRange === 'custom') {
+      return `${format(customStartDate, 'MM/dd')} - ${format(customEndDate, 'MM/dd')}`;
+    }
+    return null;
+  };
+
+  const generateReport = () => {
+    if (!currentBaby) {
+      Alert.alert('提示', '请先选择宝宝');
+      return;
+    }
+
+    // 计算统计数据
+    const days = getDays();
+    
+    // 喂养统计
+    const feedingStats = {
+      totalCount: rawFeedings.length,
+      avgPerDay: rawFeedings.length / days,
+      totalAmount: rawFeedings.reduce((sum, f) => sum + (f.amount || 0), 0),
+      totalDuration: rawFeedings.reduce((sum, f) => sum + (f.duration || 0) + (f.leftDuration || 0) + (f.rightDuration || 0), 0),
+    };
+
+    // 睡眠统计
+    const sleepDurations = rawSleeps.map(s => s.duration || 0);
+    const sleepStats = {
+      totalDuration: sleepDurations.reduce((sum, d) => sum, 0),
+      avgPerDay: sleepDurations.reduce((sum, d) => sum + d, 0) / 60 / days,
+      longestSleep: Math.max(...sleepDurations, 0),
+    };
+
+    // 尿布统计
+    const diaperStats = {
+      totalCount: rawDiapers.length,
+      avgPerDay: rawDiapers.length / days,
+      peeCount: rawDiapers.filter(d => d.type === 'pee' || d.type === 'both').length,
+      poopCount: rawDiapers.filter(d => d.type === 'poop' || d.type === 'both').length,
+    };
+
+    // 获取日期范围
+    let startDate: Date;
+    let endDate: Date;
+    
+    if (timeRange === 'custom') {
+      startDate = customStartDate;
+      endDate = customEndDate;
+    } else {
+      const today = startOfDay(new Date());
+      const daysCount = timeRange === '7days' ? 7 : 
+                       timeRange === '14days' ? 14 : 
+                       timeRange === '3months' ? 90 : 30;
+      startDate = subDays(today, daysCount - 1);
+      endDate = endOfDay(new Date());
+    }
+
+    // 导航到报告页面
+    (navigation as any).navigate('StatsReport', {
+      babyName: currentBaby.name,
+      startDate,
+      endDate,
+      feedingData,
+      sleepData,
+      diaperData,
+      feedingStats,
+      sleepStats,
+      diaperStats,
+    });
+  };
+
   const chartConfig = {
     backgroundColor: '#FFFFFF',
     backgroundGradientFrom: '#FFFFFF',
@@ -143,17 +310,24 @@ export const StatsScreen: React.FC = () => {
           <Text style={styles.headerTitle}>数据统计</Text>
           <TouchableOpacity 
             style={styles.reportButton}
-            onPress={() => Alert.alert('提示', '周/月报告功能已开发，详见设置页面')}
+            onPress={generateReport}
           >
             <Ionicons name="document-text-outline" size={20} color={Colors.primary} />
-            <Text style={styles.reportButtonText}>报告</Text>
+            <Text style={styles.reportButtonText}>生成报告</Text>
           </TouchableOpacity>
         </View>
-        <View style={styles.timeRangeSelector}>
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          style={styles.timeRangeSelector}
+          contentContainerStyle={styles.timeRangeSelectorContent}
+        >
           {[
             { value: '7days', label: '7天' },
             { value: '14days', label: '14天' },
             { value: '30days', label: '30天' },
+            { value: '3months', label: '3个月' },
+            { value: 'custom', label: '自定义' },
           ].map(range => (
             <TouchableOpacity
               key={range.value}
@@ -161,7 +335,7 @@ export const StatsScreen: React.FC = () => {
                 styles.rangeButton,
                 timeRange === range.value && styles.rangeButtonActive,
               ]}
-              onPress={() => setTimeRange(range.value as TimeRange)}
+              onPress={() => handleTimeRangeChange(range.value as TimeRange)}
             >
               <Text
                 style={[
@@ -173,7 +347,36 @@ export const StatsScreen: React.FC = () => {
               </Text>
             </TouchableOpacity>
           ))}
-        </View>
+        </ScrollView>
+        
+        {/* 自定义日期范围 */}
+        {timeRange === 'custom' && (
+          <View style={styles.customDateContainer}>
+            <TouchableOpacity 
+              style={styles.dateButton}
+              onPress={() => openDatePicker('start')}
+            >
+              <Ionicons name="calendar-outline" size={16} color={Colors.primary} />
+              <Text style={styles.dateButtonLabel}>开始</Text>
+              <Text style={styles.dateButtonText}>
+                {format(customStartDate, 'yyyy/MM/dd', { locale: zhCN })}
+              </Text>
+            </TouchableOpacity>
+            
+            <Ionicons name="arrow-forward" size={16} color="#8E8E93" />
+            
+            <TouchableOpacity 
+              style={styles.dateButton}
+              onPress={() => openDatePicker('end')}
+            >
+              <Ionicons name="calendar-outline" size={16} color={Colors.primary} />
+              <Text style={styles.dateButtonLabel}>结束</Text>
+              <Text style={styles.dateButtonText}>
+                {format(customEndDate, 'yyyy/MM/dd', { locale: zhCN })}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
       
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -187,22 +390,24 @@ export const StatsScreen: React.FC = () => {
               </View>
               <Text style={styles.chartUnit}>次/天</Text>
             </View>
-            <LineChart
-              data={feedingData}
-              width={screenWidth - 48}
-              height={220}
-              chartConfig={{
-                ...chartConfig,
-                color: (opacity = 1) => `rgba(255, 149, 0, ${opacity})`,
-                propsForDots: {
-                  r: '4',
-                  strokeWidth: '2',
-                  stroke: Colors.feeding,
-                },
-              }}
-              bezier
-              style={styles.chart}
-            />
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <LineChart
+                data={feedingData}
+                width={getChartWidth()}
+                height={220}
+                chartConfig={{
+                  ...chartConfig,
+                  color: (opacity = 1) => `rgba(255, 149, 0, ${opacity})`,
+                  propsForDots: {
+                    r: '4',
+                    strokeWidth: '2',
+                    stroke: Colors.feeding,
+                  },
+                }}
+                bezier
+                style={styles.chart}
+              />
+            </ScrollView>
           </View>
         )}
         
@@ -216,22 +421,24 @@ export const StatsScreen: React.FC = () => {
               </View>
               <Text style={styles.chartUnit}>小时/天</Text>
             </View>
-            <LineChart
-              data={sleepData}
-              width={screenWidth - 48}
-              height={220}
-              chartConfig={{
-                ...chartConfig,
-                color: (opacity = 1) => `rgba(88, 86, 214, ${opacity})`,
-                propsForDots: {
-                  r: '4',
-                  strokeWidth: '2',
-                  stroke: Colors.sleep,
-                },
-              }}
-              bezier
-              style={styles.chart}
-            />
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <LineChart
+                data={sleepData}
+                width={getChartWidth()}
+                height={220}
+                chartConfig={{
+                  ...chartConfig,
+                  color: (opacity = 1) => `rgba(88, 86, 214, ${opacity})`,
+                  propsForDots: {
+                    r: '4',
+                    strokeWidth: '2',
+                    stroke: Colors.sleep,
+                  },
+                }}
+                bezier
+                style={styles.chart}
+              />
+            </ScrollView>
           </View>
         )}
         
@@ -245,24 +452,70 @@ export const StatsScreen: React.FC = () => {
               </View>
               <Text style={styles.chartUnit}>次/天</Text>
             </View>
-            <BarChart
-              data={diaperData}
-              width={screenWidth - 48}
-              height={220}
-              chartConfig={{
-                ...chartConfig,
-                color: (opacity = 1) => `rgba(52, 199, 89, ${opacity})`,
-              }}
-              style={styles.chart}
-              yAxisLabel=""
-              yAxisSuffix=""
-              fromZero
-            />
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <BarChart
+                data={diaperData}
+                width={getChartWidth()}
+                height={220}
+                chartConfig={{
+                  ...chartConfig,
+                  color: (opacity = 1) => `rgba(52, 199, 89, ${opacity})`,
+                }}
+                style={styles.chart}
+                yAxisLabel=""
+                yAxisSuffix=""
+                fromZero
+              />
+            </ScrollView>
           </View>
         )}
         
         <View style={styles.footer} />
       </ScrollView>
+      
+      {/* 日期选择器 */}
+      {Platform.OS === 'ios' ? (
+        <Modal
+          visible={showDatePicker}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setShowDatePicker(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.datePickerContainer}>
+              <View style={styles.datePickerHeader}>
+                <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                  <Text style={styles.datePickerButton}>取消</Text>
+                </TouchableOpacity>
+                <Text style={styles.datePickerTitle}>
+                  {datePickerMode === 'start' ? '选择开始日期' : '选择结束日期'}
+                </Text>
+                <TouchableOpacity onPress={() => confirmDateSelection(tempDate)}>
+                  <Text style={[styles.datePickerButton, styles.datePickerConfirm]}>确定</Text>
+                </TouchableOpacity>
+              </View>
+              <DateTimePicker
+                value={tempDate}
+                mode="date"
+                display="spinner"
+                onChange={handleDateChange}
+                locale="zh-CN"
+                maximumDate={new Date()}
+              />
+            </View>
+          </View>
+        </Modal>
+      ) : (
+        showDatePicker && (
+          <DateTimePicker
+            value={tempDate}
+            mode="date"
+            display="default"
+            onChange={handleDateChange}
+            maximumDate={new Date()}
+          />
+        )
+      )}
     </SafeAreaView>
   );
 };
@@ -305,16 +558,20 @@ const styles = StyleSheet.create({
     color: Colors.primary,
   },
   timeRangeSelector: {
+    marginBottom: 12,
+  },
+  timeRangeSelectorContent: {
     flexDirection: 'row',
     gap: 8,
+    paddingHorizontal: 0,
   },
   rangeButton: {
-    flex: 1,
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 8,
     backgroundColor: '#F5F5F7',
     alignItems: 'center',
+    minWidth: 70,
   },
   rangeButtonActive: {
     backgroundColor: '#007AFF',
@@ -378,5 +635,70 @@ const styles = StyleSheet.create({
   },
   footer: {
     height: 32,
+  },
+  customDateContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E5EA',
+    gap: 12,
+  },
+  dateButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: '#F5F5F7',
+    gap: 6,
+  },
+  dateButtonLabel: {
+    fontSize: 13,
+    color: '#8E8E93',
+    fontWeight: '500',
+  },
+  dateButtonText: {
+    fontSize: 13,
+    color: '#000',
+    fontWeight: '600',
+    flex: 1,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  datePickerContainer: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: 34,
+  },
+  datePickerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5EA',
+  },
+  datePickerTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#000',
+  },
+  datePickerButton: {
+    fontSize: 16,
+    color: '#8E8E93',
+    fontWeight: '400',
+  },
+  datePickerConfirm: {
+    color: Colors.primary,
+    fontWeight: '600',
   },
 });

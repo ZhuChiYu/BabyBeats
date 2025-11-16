@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, RefreshControl, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { useBabyStore } from '../store/babyStore';
 import { FeedingService } from '../services/feedingService';
 import { SleepService } from '../services/sleepService';
@@ -11,18 +12,22 @@ import { zhCN } from 'date-fns/locale';
 
 type RecordType = 'all' | 'feeding' | 'sleep' | 'diaper' | 'pumping';
 
-interface Record {
+interface BabyRecord {
   id: string;
   type: 'feeding' | 'sleep' | 'diaper' | 'pumping';
   time: number;
   data: any;
 }
 
-export const LogScreen: React.FC = () => {
+interface LogScreenProps {
+  navigation: any;
+}
+
+export const LogScreen: React.FC<LogScreenProps> = ({ navigation }) => {
   const { getCurrentBaby } = useBabyStore();
   const currentBaby = getCurrentBaby();
   
-  const [records, setRecords] = useState<Record[]>([]);
+  const [records, setRecords] = useState<BabyRecord[]>([]);
   const [filterType, setFilterType] = useState<RecordType>('all');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -32,13 +37,22 @@ export const LogScreen: React.FC = () => {
       loadRecords();
     }
   }, [currentBaby?.id, filterType]);
+
+  // 监听页面聚焦，实时刷新数据
+  useFocusEffect(
+    React.useCallback(() => {
+      if (currentBaby) {
+        loadRecords();
+      }
+    }, [currentBaby?.id, filterType])
+  );
   
   const loadRecords = async () => {
     if (!currentBaby) return;
     
     setLoading(true);
     try {
-      const allRecords: Record[] = [];
+      const allRecords: BabyRecord[] = [];
       
       if (filterType === 'all' || filterType === 'feeding') {
         const feedings = await FeedingService.getByBabyId(currentBaby.id, 50);
@@ -77,7 +91,24 @@ export const LogScreen: React.FC = () => {
     loadRecords();
   };
   
-  const handleDelete = (record: Record) => {
+  const handleEdit = (record: BabyRecord) => {
+    switch (record.type) {
+      case 'feeding':
+        navigation.navigate('EditFeeding', { feedingId: record.id });
+        break;
+      case 'sleep':
+        navigation.navigate('EditSleep', { sleepId: record.id });
+        break;
+      case 'diaper':
+        navigation.navigate('EditDiaper', { diaperId: record.id });
+        break;
+      case 'pumping':
+        navigation.navigate('EditPumping', { pumpingId: record.id });
+        break;
+    }
+  };
+
+  const handleDelete = (record: BabyRecord) => {
     Alert.alert(
       '确认删除',
       '确定要删除这条记录吗？',
@@ -122,7 +153,7 @@ export const LogScreen: React.FC = () => {
     return icons[type] || { name: 'ellipse', color: '#8E8E93' };
   };
   
-  const getRecordTitle = (record: Record) => {
+  const getRecordTitle = (record: BabyRecord) => {
     switch (record.type) {
       case 'feeding':
         const feeding = record.data;
@@ -177,7 +208,7 @@ export const LogScreen: React.FC = () => {
   };
   
   // 按日期分组
-  const groupedRecords: { [key: string]: Record[] } = {};
+  const groupedRecords: { [key: string]: BabyRecord[] } = {};
   records.forEach(record => {
     const dateKey = formatDate(record.time);
     if (!groupedRecords[dateKey]) {
@@ -252,10 +283,7 @@ export const LogScreen: React.FC = () => {
                   <View key={record.id} style={styles.recordCard}>
                     <TouchableOpacity 
                       style={styles.recordLeft}
-                      onPress={() => {
-                        // TODO: 导航到编辑页面
-                        Alert.alert('提示', '点击编辑功能即将上线');
-                      }}
+                      onPress={() => handleEdit(record)}
                     >
                       <View style={[styles.iconContainer, { backgroundColor: `${icon.color}15` }]}>
                         <Ionicons name={icon.name as any} size={20} color={icon.color} />

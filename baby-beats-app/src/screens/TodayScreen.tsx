@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useBabyStore } from '../store/babyStore';
 import { FeedingService } from '../services/feedingService';
@@ -8,8 +8,11 @@ import { DiaperService } from '../services/diaperService';
 import { PumpingService } from '../services/pumpingService';
 import { Card } from '../components/Card';
 import { QuickActionMenu } from '../components/QuickActionMenu';
+import { LiveTimerCard } from '../components/LiveTimerCard';
 import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
+import { useFocusEffect } from '@react-navigation/native';
+import { syncManager } from '../services/syncManager';
 
 export const TodayScreen: React.FC = () => {
   const { getCurrentBaby } = useBabyStore();
@@ -37,17 +40,30 @@ export const TodayScreen: React.FC = () => {
   });
   
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   
   useEffect(() => {
     if (currentBaby) {
       loadTodayData();
     }
   }, [currentBaby?.id]);
+
+  // 监听页面聚焦，自动刷新数据
+  useFocusEffect(
+    React.useCallback(() => {
+      if (currentBaby) {
+        loadTodayData();
+      }
+    }, [currentBaby?.id])
+  );
   
-  const loadTodayData = async () => {
+  const loadTodayData = async (isRefreshing = false) => {
     if (!currentBaby) return;
     
-    setLoading(true);
+    if (!isRefreshing) {
+      setLoading(true);
+    }
+    
     try {
       const [feedingData, sleepData, diaperData, pumpingData] = await Promise.all([
         FeedingService.getTodayStats(currentBaby.id),
@@ -64,6 +80,28 @@ export const TodayScreen: React.FC = () => {
       console.error('Failed to load today data:', error);
     } finally {
       setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      // 如果已登录，先同步数据（先推送后拉取）
+      if (syncManager.isLoggedIn()) {
+        console.log('下拉刷新：开始同步数据...');
+        // 先推送本地数据到服务器
+        await syncManager.pushToServer(currentBaby?.id);
+        // 再从服务器拉取最新数据
+        await syncManager.pullFromServer(currentBaby?.id);
+        console.log('下拉刷新：同步完成');
+      }
+      // 然后加载本地数据
+      await loadTodayData(true);
+    } catch (error) {
+      console.error('Refresh failed:', error);
+      // 即使同步失败，也尝试加载本地数据
+      await loadTodayData(true);
     }
   };
   
@@ -99,7 +137,21 @@ export const TodayScreen: React.FC = () => {
         <QuickActionMenu />
       </View>
       
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.content} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#007AFF']}
+            tintColor="#007AFF"
+          />
+        }
+      >
+        {/* 实时计时卡片 */}
+        <LiveTimerCard />
+        
         {/* 喂养卡片 */}
         <Card>
           <View style={styles.cardHeader}>

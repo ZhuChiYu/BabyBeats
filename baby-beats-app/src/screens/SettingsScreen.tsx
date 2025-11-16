@@ -19,14 +19,22 @@ import { PumpingService } from '../services/pumpingService';
 import { GrowthService } from '../services/growthService';
 import { exportAllData } from '../utils/exportUtils';
 import { Colors, APP_CONFIG } from '../constants';
+import { useTheme } from '../contexts/ThemeContext';
+import { useLanguage } from '../contexts/LanguageContext';
+import { DataService } from '../services/dataService';
 
-export const SettingsScreen: React.FC = () => {
+interface SettingsScreenProps {
+  navigation: any;
+}
+
+export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) => {
   const { getCurrentBaby, babies } = useBabyStore();
   const currentBaby = getCurrentBaby();
+  const { theme, themeMode, isDarkMode } = useTheme();
+  const { language } = useLanguage();
   
   const [exporting, setExporting] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [darkModeEnabled, setDarkModeEnabled] = useState(false);
   
   const handleExportData = async (format: 'csv' | 'json') => {
     if (!currentBaby) {
@@ -50,7 +58,7 @@ export const SettingsScreen: React.FC = () => {
                 SleepService.getByBabyId(currentBaby.id),
                 DiaperService.getByBabyId(currentBaby.id),
                 PumpingService.getByBabyId(currentBaby.id),
-                GrowthService.getGrowthRecords(currentBaby.id),
+                GrowthService.getByBabyId(currentBaby.id),
               ]);
               
               await exportAllData(
@@ -78,21 +86,113 @@ export const SettingsScreen: React.FC = () => {
     );
   };
   
-  const handleClearData = () => {
+  const handleClearData = async () => {
+    if (!currentBaby) {
+      Alert.alert('提示', '请先选择一个宝宝');
+      return;
+    }
+
+    // 第一次确认：询问是否清空
     Alert.alert(
       '清空数据',
-      '⚠️ 此操作将删除所有记录，且无法恢复！确定要继续吗？',
+      '⚠️ 此操作将删除所有记录（喂养、睡眠、尿布、挤奶、成长等），但保留宝宝信息。\n\n确定要继续吗？',
       [
         { text: '取消', style: 'cancel' },
         {
-          text: '确定',
+          text: '继续',
           style: 'destructive',
-          onPress: () => {
-            Alert.alert('提示', '数据清空功能开发中');
-          },
+          onPress: () => showDataStats(),
         },
       ]
     );
+  };
+
+  const showDataStats = async () => {
+    try {
+      // 获取数据统计
+      const stats = await DataService.getDataStats(currentBaby?.id);
+      const totalRecords = 
+        stats.feedingCount + 
+        stats.sleepCount + 
+        stats.diaperCount + 
+        stats.pumpingCount + 
+        stats.growthCount;
+
+      if (totalRecords === 0) {
+        Alert.alert('提示', '当前没有任何记录可以清空');
+        return;
+      }
+
+      // 第二次确认：显示数据统计
+      Alert.alert(
+        '确认清空',
+        `即将清空以下数据：\n\n` +
+        `• 喂养记录：${stats.feedingCount} 条\n` +
+        `• 睡眠记录：${stats.sleepCount} 条\n` +
+        `• 尿布记录：${stats.diaperCount} 条\n` +
+        `• 挤奶记录：${stats.pumpingCount} 条\n` +
+        `• 成长记录：${stats.growthCount} 条\n\n` +
+        `共 ${totalRecords} 条记录\n\n` +
+        `⚠️ 此操作无法撤销！`,
+        [
+          { text: '取消', style: 'cancel' },
+          {
+            text: '确认清空',
+            style: 'destructive',
+            onPress: () => confirmFinalClear(),
+          },
+        ]
+      );
+    } catch (error) {
+      console.error('Failed to get data stats:', error);
+      Alert.alert('错误', '获取数据统计失败');
+    }
+  };
+
+  const confirmFinalClear = () => {
+    // 第三次确认：最终确认
+    Alert.alert(
+      '最后确认',
+      '真的要清空所有数据吗？此操作无法恢复！\n\n请输入"确认清空"以继续。',
+      [
+        { text: '取消', style: 'cancel' },
+        {
+          text: '清空',
+          style: 'destructive',
+          onPress: () => executeClearData(),
+        },
+      ]
+    );
+  };
+
+  const executeClearData = async () => {
+    try {
+      setExporting(true); // 复用 exporting 状态显示加载
+      
+      // 清空数据
+      await DataService.clearAllRecords(currentBaby?.id);
+      
+      // 优化数据库
+      await DataService.optimizeDatabase();
+      
+      Alert.alert(
+        '成功',
+        '所有数据已清空',
+        [
+          {
+            text: '确定',
+            onPress: () => {
+              // 可以刷新页面或导航回首页
+            },
+          },
+        ]
+      );
+    } catch (error) {
+      console.error('Failed to clear data:', error);
+      Alert.alert('错误', '清空数据失败，请重试');
+    } finally {
+      setExporting(false);
+    }
   };
   
   const renderSettingItem = (
@@ -150,7 +250,10 @@ export const SettingsScreen: React.FC = () => {
                 {currentBaby.gender === 'male' ? '男孩' : currentBaby.gender === 'female' ? '女孩' : ''}
               </Text>
             </View>
-            <TouchableOpacity style={styles.babyEditButton}>
+            <TouchableOpacity 
+              style={styles.babyEditButton}
+              onPress={() => navigation.navigate('EditBaby')}
+            >
               <Ionicons name="create-outline" size={20} color={Colors.primary} />
             </TouchableOpacity>
           </View>
@@ -164,7 +267,7 @@ export const SettingsScreen: React.FC = () => {
               'stats-chart-outline',
               '周/月报告',
               '查看详细的统计报告',
-              () => Alert.alert('提示', '报告功能已开发完成，请在统计页面查看')
+              () => navigation.navigate('Main', { screen: 'Stats' })
             )}
             {renderSettingItem(
               'download-outline',
@@ -181,16 +284,10 @@ export const SettingsScreen: React.FC = () => {
               exporting ? <ActivityIndicator size="small" color={Colors.primary} /> : null
             )}
             {renderSettingItem(
-              'cloud-upload-outline',
-              '备份数据',
-              '备份到云端（开发中）',
-              () => Alert.alert('提示', '云端备份功能开发中')
-            )}
-            {renderSettingItem(
-              'cloud-download-outline',
-              '恢复数据',
-              '从云端恢复（开发中）',
-              () => Alert.alert('提示', '云端恢复功能开发中')
+              'cloud-outline',
+              '数据同步',
+              '多端同步，随时随地访问',
+              () => navigation.navigate('SyncSettings')
             )}
           </>
         )}
@@ -213,20 +310,14 @@ export const SettingsScreen: React.FC = () => {
             {renderSettingItem(
               'moon-outline',
               '深色模式',
-              '开发中',
-              undefined,
-              <Switch
-                value={darkModeEnabled}
-                onValueChange={setDarkModeEnabled}
-                trackColor={{ false: '#E5E5EA', true: Colors.primary }}
-                disabled
-              />
+              themeMode === 'light' ? '浅色' : themeMode === 'dark' ? '深色' : '跟随系统',
+              () => navigation.navigate('ThemeSettings')
             )}
             {renderSettingItem(
               'language-outline',
               '语言设置',
-              '中文简体',
-              () => Alert.alert('提示', '语言设置功能开发中')
+              language === 'zh' ? '中文简体' : 'English',
+              () => navigation.navigate('LanguageSettings')
             )}
           </>
         )}
@@ -239,13 +330,13 @@ export const SettingsScreen: React.FC = () => {
               'people-outline',
               '管理宝宝',
               `当前有 ${babies.length} 个宝宝`,
-              () => Alert.alert('提示', '宝宝管理功能开发中')
+              () => navigation.navigate('BabyManagement')
             )}
             {renderSettingItem(
               'add-circle-outline',
               '添加宝宝',
               '添加新的宝宝档案',
-              () => Alert.alert('提示', '添加宝宝功能开发中')
+              () => navigation.navigate('AddBaby')
             )}
           </>
         )}
@@ -263,19 +354,19 @@ export const SettingsScreen: React.FC = () => {
               'shield-checkmark-outline',
               '隐私政策',
               '查看我们的隐私政策',
-              () => Alert.alert('隐私政策', '您的数据安全是我们的首要任务')
+              () => navigation.navigate('PrivacyPolicy')
             )}
             {renderSettingItem(
               'document-text-outline',
               '使用条款',
               '查看使用条款',
-              () => Alert.alert('使用条款', '请遵守使用条款')
+              () => navigation.navigate('Terms')
             )}
             {renderSettingItem(
               'help-circle-outline',
               '帮助与反馈',
               '获取帮助或提交反馈',
-              () => Alert.alert('帮助', '如需帮助，请联系我们')
+              () => navigation.navigate('Help')
             )}
           </>
         )}

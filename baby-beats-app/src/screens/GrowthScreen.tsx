@@ -8,14 +8,21 @@ import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import { Colors } from '../constants';
 import { calculateAge, formatAge } from '../utils/dateUtils';
+import { useFocusEffect } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const screenWidth = Dimensions.get('window').width;
 
 type GrowthType = 'weight' | 'height' | 'head';
 
-export const GrowthScreen: React.FC = () => {
+interface GrowthScreenProps {
+  navigation: any;
+}
+
+export const GrowthScreen: React.FC<GrowthScreenProps> = ({ navigation }) => {
   const { getCurrentBaby } = useBabyStore();
   const currentBaby = getCurrentBaby();
+  const insets = useSafeAreaInsets();
   
   const [growthType, setGrowthType] = useState<GrowthType>('weight');
   const [records, setRecords] = useState<any[]>([]);
@@ -27,13 +34,22 @@ export const GrowthScreen: React.FC = () => {
       loadGrowthData();
     }
   }, [currentBaby?.id, growthType]);
+
+  // 监听页面聚焦，自动刷新数据
+  useFocusEffect(
+    React.useCallback(() => {
+      if (currentBaby) {
+        loadGrowthData();
+      }
+    }, [currentBaby?.id, growthType])
+  );
   
   const loadGrowthData = async () => {
     if (!currentBaby) return;
     
     setLoading(true);
     try {
-      const data = await GrowthService.getGrowthRecords(currentBaby.id);
+      const data = await GrowthService.getByBabyId(currentBaby.id);
       setRecords(data);
       
       // 生成图表数据
@@ -42,18 +58,21 @@ export const GrowthScreen: React.FC = () => {
         const values: number[] = [];
         
         data.slice(0, 12).reverse().forEach(record => {
-          labels.push(format(new Date(record.measurementDate), 'MM/dd'));
-          
-          switch (growthType) {
-            case 'weight':
-              values.push(record.weight);
-              break;
-            case 'height':
-              values.push(record.height);
-              break;
-            case 'head':
-              values.push(record.headCircumference || 0);
-              break;
+          // 使用 date 字段而不是 measurementDate
+          if (record.date) {
+            labels.push(format(new Date(record.date), 'MM/dd'));
+            
+            switch (growthType) {
+              case 'weight':
+                values.push(record.weight || 0);
+                break;
+              case 'height':
+                values.push(record.height || 0);
+                break;
+              case 'head':
+                values.push(record.headCirc || 0);
+                break;
+            }
           }
         });
         
@@ -238,7 +257,7 @@ export const GrowthScreen: React.FC = () => {
                   <View style={[styles.recordIndicator, { backgroundColor: typeInfo.color }]} />
                   <View>
                     <Text style={styles.recordDate}>
-                      {format(new Date(record.measurementDate), 'yyyy年MM月dd日', { locale: zhCN })}
+                      {format(new Date(record.date), 'yyyy年MM月dd日', { locale: zhCN })}
                     </Text>
                     <View style={styles.recordValues}>
                       <Text style={styles.recordValue}>体重 {record.weight}kg</Text>
@@ -264,8 +283,8 @@ export const GrowthScreen: React.FC = () => {
       
       {/* 添加按钮 */}
       <TouchableOpacity
-        style={styles.addButton}
-        onPress={() => Alert.alert('提示', '添加成长记录功能即将上线')}
+        style={[styles.addButton, { bottom: 24 + insets.bottom }]}
+        onPress={() => navigation.navigate('AddGrowth', { type: growthType })}
       >
         <Ionicons name="add" size={28} color="#FFFFFF" />
       </TouchableOpacity>
