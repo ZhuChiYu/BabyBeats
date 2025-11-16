@@ -13,10 +13,14 @@ import {
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useBabyStore } from '../store/babyStore';
 import { SleepService } from '../services/sleepService';
-import { Button } from '../components/Button';
+import { ModalHeader } from '../components/ModalHeader';
 import { Sleep } from '../types';
 
-export const AddSleepScreen: React.FC = () => {
+interface AddSleepScreenProps {
+  navigation: any;
+}
+
+export const AddSleepScreen: React.FC<AddSleepScreenProps> = ({ navigation }) => {
   const { getCurrentBaby } = useBabyStore();
   const currentBaby = getCurrentBaby();
   
@@ -56,17 +60,13 @@ export const AddSleepScreen: React.FC = () => {
         notes: notes || undefined,
       });
       
-      Alert.alert('成功', '睡眠记录已保存', [
-        {
-          text: '确定',
-          onPress: () => {
-            // 重置表单
-            setStartTime(new Date(Date.now() - 2 * 60 * 60 * 1000));
-            setEndTime(new Date());
-            setNotes('');
-          },
-        },
-      ]);
+      // 重置表单
+      setStartTime(new Date(Date.now() - 2 * 60 * 60 * 1000));
+      setEndTime(new Date());
+      setNotes('');
+      
+      // 关闭页面
+      navigation.goBack();
     } catch (error) {
       console.error('Failed to save sleep:', error);
       Alert.alert('错误', '保存失败，请重试');
@@ -98,6 +98,13 @@ export const AddSleepScreen: React.FC = () => {
   
   return (
     <SafeAreaView style={styles.container}>
+      <ModalHeader
+        title="记录睡眠"
+        onCancel={() => navigation.goBack()}
+        onSave={handleSave}
+        saving={saving}
+      />
+      
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* 睡眠类型 */}
         <View style={styles.section}>
@@ -211,15 +218,7 @@ export const AddSleepScreen: React.FC = () => {
           />
         </View>
         
-        <View style={styles.footer}>
-          <Button
-            title="保存"
-            onPress={handleSave}
-            size="large"
-            loading={saving}
-            style={styles.saveButton}
-          />
-        </View>
+        <View style={{ height: 40 }} />
       </ScrollView>
     </SafeAreaView>
   );

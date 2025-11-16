@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useBabyStore } from '../store/babyStore';
@@ -15,9 +16,15 @@ import { useTimerStore } from '../store/timerStore';
 import { FeedingService } from '../services/feedingService';
 import { Button } from '../components/Button';
 import { Timer } from '../components/Timer';
+import { ModalHeader } from '../components/ModalHeader';
 import { Feeding } from '../types';
+import { format } from 'date-fns';
 
-export const AddFeedingScreen: React.FC = () => {
+interface AddFeedingScreenProps {
+  navigation: any;
+}
+
+export const AddFeedingScreen: React.FC<AddFeedingScreenProps> = ({ navigation }) => {
   const { getCurrentBaby } = useBabyStore();
   const currentBaby = getCurrentBaby();
   
@@ -29,6 +36,7 @@ export const AddFeedingScreen: React.FC = () => {
     startTimer,
     stopTimer,
     resetTimer,
+    sessionStartTime,
   } = useTimerStore();
   
   const [feedingType, setFeedingType] = useState<Feeding['type']>('breast');
@@ -88,19 +96,14 @@ export const AddFeedingScreen: React.FC = () => {
       
       await FeedingService.create(feedingData);
       
-      Alert.alert('成功', '喂养记录已保存', [
-        {
-          text: '确定',
-          onPress: () => {
-            // 重置表单
-            resetTimer();
-            setMilkAmount('');
-            setMilkBrand('');
-            setNotes('');
-            // 这里应该导航回首页，暂时先这样
-          },
-        },
-      ]);
+      // 重置表单
+      resetTimer();
+      setMilkAmount('');
+      setMilkBrand('');
+      setNotes('');
+      
+      // 关闭页面
+      navigation.goBack();
     } catch (error) {
       console.error('Failed to save feeding:', error);
       Alert.alert('错误', '保存失败，请重试');
@@ -121,9 +124,13 @@ export const AddFeedingScreen: React.FC = () => {
   
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>记录喂养</Text>
-      </View>
+      <ModalHeader
+        title="记录喂养"
+        onCancel={() => navigation.goBack()}
+        onSave={handleSave}
+        saving={saving}
+        disabled={isRunning}
+      />
       
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* 类型选择 */}
@@ -201,6 +208,16 @@ export const AddFeedingScreen: React.FC = () => {
         {/* 亲喂母乳 - 计时器 */}
         {feedingType === 'breast' && (
           <View style={styles.section}>
+            {/* 哺乳开始时间 */}
+            {sessionStartTime && (
+              <View style={styles.sessionInfo}>
+                <Ionicons name="time-outline" size={16} color="#8E8E93" />
+                <Text style={styles.sessionInfoText}>
+                  开始时间：{format(new Date(sessionStartTime), 'HH:mm')}
+                </Text>
+              </View>
+            )}
+            
             <Text style={styles.sectionTitle}>哺乳时长</Text>
             <View style={styles.timersRow}>
               <View style={styles.timerContainer}>
@@ -269,16 +286,7 @@ export const AddFeedingScreen: React.FC = () => {
           />
         </View>
         
-        <View style={styles.footer}>
-          <Button
-            title="保存"
-            onPress={handleSave}
-            size="large"
-            loading={saving}
-            disabled={isRunning}
-            style={styles.saveButton}
-          />
-        </View>
+        <View style={{ height: 40 }} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -288,18 +296,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F5F5F7',
-  },
-  header: {
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#000',
   },
   content: {
     flex: 1,
@@ -315,6 +311,19 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#000',
     marginBottom: 12,
+  },
+  sessionInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0F9FF',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  sessionInfoText: {
+    fontSize: 14,
+    color: '#3C3C43',
+    marginLeft: 6,
   },
   typeButtons: {
     flexDirection: 'row',

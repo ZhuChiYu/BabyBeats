@@ -12,10 +12,14 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useBabyStore } from '../store/babyStore';
 import { DiaperService } from '../services/diaperService';
-import { Button } from '../components/Button';
+import { ModalHeader } from '../components/ModalHeader';
 import { Diaper } from '../types';
 
-export const AddDiaperScreen: React.FC = () => {
+interface AddDiaperScreenProps {
+  navigation: any;
+}
+
+export const AddDiaperScreen: React.FC<AddDiaperScreenProps> = ({ navigation }) => {
   const { getCurrentBaby } = useBabyStore();
   const currentBaby = getCurrentBaby();
   
@@ -48,21 +52,17 @@ export const AddDiaperScreen: React.FC = () => {
         notes: notes || undefined,
       });
       
-      Alert.alert('成功', '尿布记录已保存', [
-        {
-          text: '确定',
-          onPress: () => {
-            // 重置表单
-            setDiaperType('both');
-            setPoopConsistency('normal');
-            setPoopColor('yellow');
-            setPoopAmount('medium');
-            setPeeAmount('medium');
-            setHasAbnormality(false);
-            setNotes('');
-          },
-        },
-      ]);
+      // 重置表单
+      setDiaperType('both');
+      setPoopConsistency('normal');
+      setPoopColor('yellow');
+      setPoopAmount('medium');
+      setPeeAmount('medium');
+      setHasAbnormality(false);
+      setNotes('');
+      
+      // 关闭页面
+      navigation.goBack();
     } catch (error) {
       console.error('Failed to save diaper:', error);
       Alert.alert('错误', '保存失败，请重试');
@@ -83,6 +83,13 @@ export const AddDiaperScreen: React.FC = () => {
   
   return (
     <SafeAreaView style={styles.container}>
+      <ModalHeader
+        title="记录尿布"
+        onCancel={() => navigation.goBack()}
+        onSave={handleSave}
+        saving={saving}
+      />
+      
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* 类型选择 */}
         <View style={styles.section}>
@@ -314,15 +321,7 @@ export const AddDiaperScreen: React.FC = () => {
           />
         </View>
         
-        <View style={styles.footer}>
-          <Button
-            title="保存"
-            onPress={handleSave}
-            size="large"
-            loading={saving}
-            style={styles.saveButton}
-          />
-        </View>
+        <View style={{ height: 40 }} />
       </ScrollView>
     </SafeAreaView>
   );

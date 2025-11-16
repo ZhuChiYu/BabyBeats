@@ -13,6 +13,7 @@ import {
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import { FeedingService } from '../services/feedingService';
+import { ModalHeader } from '../components/ModalHeader';
 import { Feeding } from '../types';
 import { Colors } from '../constants';
 import { format } from 'date-fns';
@@ -109,9 +110,9 @@ export const EditFeedingScreen: React.FC<EditFeedingScreenProps> = ({ navigation
       }
       
       await FeedingService.update(feedingId, updates);
-      Alert.alert('成功', '记录已更新', [
-        { text: '确定', onPress: () => navigation.goBack() },
-      ]);
+      
+      // 关闭页面
+      navigation.goBack();
     } catch (error) {
       Alert.alert('错误', '更新失败，请重试');
     } finally {
@@ -129,6 +130,13 @@ export const EditFeedingScreen: React.FC<EditFeedingScreenProps> = ({ navigation
   
   return (
     <SafeAreaView style={styles.container}>
+      <ModalHeader
+        title="编辑喂养记录"
+        onCancel={() => navigation.goBack()}
+        onSave={handleSave}
+        saving={saving}
+      />
+      
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* 喂养类型 */}
         <View style={styles.section}>
@@ -257,22 +265,9 @@ export const EditFeedingScreen: React.FC<EditFeedingScreenProps> = ({ navigation
             numberOfLines={4}
           />
         </View>
+        
+        <View style={{ height: 40 }} />
       </ScrollView>
-      
-      {/* 保存按钮 */}
-      <View style={styles.footer}>
-        <TouchableOpacity
-          style={[styles.saveButton, saving && styles.saveButtonDisabled]}
-          onPress={handleSave}
-          disabled={saving}
-        >
-          {saving ? (
-            <ActivityIndicator color="#FFFFFF" />
-          ) : (
-            <Text style={styles.saveButtonText}>保存</Text>
-          )}
-        </TouchableOpacity>
-      </View>
     </SafeAreaView>
   );
 };

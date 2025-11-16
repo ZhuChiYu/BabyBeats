@@ -12,10 +12,14 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useBabyStore } from '../store/babyStore';
 import { PumpingService } from '../services/pumpingService';
-import { Button } from '../components/Button';
+import { ModalHeader } from '../components/ModalHeader';
 import { Pumping } from '../types';
 
-export const AddPumpingScreen: React.FC = () => {
+interface AddPumpingScreenProps {
+  navigation: any;
+}
+
+export const AddPumpingScreen: React.FC<AddPumpingScreenProps> = ({ navigation }) => {
   const { getCurrentBaby } = useBabyStore();
   const currentBaby = getCurrentBaby();
   
@@ -56,17 +60,13 @@ export const AddPumpingScreen: React.FC = () => {
         notes: notes || undefined,
       });
       
-      Alert.alert('成功', '挤奶记录已保存', [
-        {
-          text: '确定',
-          onPress: () => {
-            // 重置表单
-            setLeftAmount('');
-            setRightAmount('');
-            setNotes('');
-          },
-        },
-      ]);
+      // 重置表单
+      setLeftAmount('');
+      setRightAmount('');
+      setNotes('');
+      
+      // 关闭页面
+      navigation.goBack();
     } catch (error) {
       console.error('Failed to save pumping:', error);
       Alert.alert('错误', '保存失败，请重试');
@@ -87,6 +87,13 @@ export const AddPumpingScreen: React.FC = () => {
   
   return (
     <SafeAreaView style={styles.container}>
+      <ModalHeader
+        title="记录挤奶"
+        onCancel={() => navigation.goBack()}
+        onSave={handleSave}
+        saving={saving}
+      />
+      
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* 挤奶方式 */}
         <View style={styles.section}>
@@ -247,15 +254,7 @@ export const AddPumpingScreen: React.FC = () => {
           />
         </View>
         
-        <View style={styles.footer}>
-          <Button
-            title="保存"
-            onPress={handleSave}
-            size="large"
-            loading={saving}
-            style={styles.saveButton}
-          />
-        </View>
+        <View style={{ height: 40 }} />
       </ScrollView>
     </SafeAreaView>
   );
