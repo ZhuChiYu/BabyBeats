@@ -1,4 +1,4 @@
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { Feeding, Sleep, Diaper, Pumping, GrowthRecord } from '../types';
 import { format } from 'date-fns';
@@ -31,9 +31,7 @@ export const exportToCSV = async (data: any[], filename: string): Promise<void> 
   
   // 保存文件
   const fileUri = `${FileSystem.documentDirectory}${filename}.csv`;
-  await FileSystem.writeAsStringAsync(fileUri, csvContent, {
-    encoding: FileSystem.EncodingType.UTF8,
-  });
+  await FileSystem.writeAsStringAsync(fileUri, csvContent);
   
   // 分享文件
   if (await Sharing.isAvailableAsync()) {
@@ -50,9 +48,7 @@ export const exportToJSON = async (data: any, filename: string): Promise<void> =
   const jsonContent = JSON.stringify(data, null, 2);
   
   const fileUri = `${FileSystem.documentDirectory}${filename}.json`;
-  await FileSystem.writeAsStringAsync(fileUri, jsonContent, {
-    encoding: FileSystem.EncodingType.UTF8,
-  });
+  await FileSystem.writeAsStringAsync(fileUri, jsonContent);
   
   if (await Sharing.isAvailableAsync()) {
     await Sharing.shareAsync(fileUri);
