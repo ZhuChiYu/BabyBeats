@@ -1,5 +1,6 @@
 import { Diaper } from '../types';
 import { getDatabase, generateId, getCurrentTimestamp } from '../database';
+import { syncManager } from './syncManager';
 
 export class DiaperService {
   // 创建尿布记录
@@ -12,6 +13,8 @@ export class DiaperService {
       createdAt: now,
       updatedAt: now,
     };
+    
+    console.log('💩 创建尿布记录:', diaper.id, '类型:', diaper.type);
     
     await db.runAsync(
       `INSERT INTO diapers (
@@ -34,7 +37,24 @@ export class DiaperService {
       ]
     );
     
+    // 自动同步到服务器
+    this.autoSync(diaper).catch(err => {
+      console.warn('尿布记录自动同步失败（不影响本地保存）:', err);
+    });
+    
     return diaper;
+  }
+  
+  // 自动同步单个记录到服务器
+  private static async autoSync(diaper: Diaper): Promise<void> {
+    if (!syncManager.isAutoSyncEnabled()) {
+      console.log('⏭️ 自动同步未启用，跳过尿布记录同步');
+      return;
+    }
+    
+    console.log('🔄 自动同步尿布记录到服务器:', diaper.id);
+    await syncManager.syncDiaperToServer(diaper);
+    console.log('✅ 尿布记录已自动同步到服务器');
   }
   
   // 获取宝宝的所有尿布记录
@@ -74,10 +94,23 @@ export class DiaperService {
     return this.getByDateRange(babyId, startOfDay, endOfDay);
   }
   
+  // 获取单条记录
+  static async getById(id: string): Promise<Diaper | null> {
+    const db = await getDatabase();
+    const row = await db.getFirstAsync<any>(
+      'SELECT * FROM diapers WHERE id = ?',
+      [id]
+    );
+    
+    return row ? this.mapRowToDiaper(row) : null;
+  }
+  
   // 更新尿布记录
   static async update(id: string, updates: Partial<Diaper>): Promise<void> {
     const db = await getDatabase();
     const now = getCurrentTimestamp();
+    
+    console.log('✏️ 更新尿布记录:', id);
     
     const fields: string[] = [];
     const values: any[] = [];
@@ -123,12 +156,26 @@ export class DiaperService {
       `UPDATE diapers SET ${fields.join(', ')} WHERE id = ?`,
       values
     );
+    
+    // 自动同步更新到服务器
+    const updated = await this.getById(id);
+    if (updated) {
+      this.autoSync(updated).catch(err => {
+        console.warn('尿布记录更新同步失败（不影响本地保存）:', err);
+      });
+    }
   }
   
   // 删除尿布记录
   static async delete(id: string): Promise<void> {
     const db = await getDatabase();
+    console.log('🗑️ 删除尿布记录:', id);
     await db.runAsync('DELETE FROM diapers WHERE id = ?', [id]);
+    
+    // TODO: 实现删除记录的同步（需要在服务器端添加删除接口）
+    if (syncManager.isAutoSyncEnabled()) {
+      console.log('💡 提示：删除操作需要手动同步才能同步到服务器');
+    }
   }
   
   // 获取今日统计

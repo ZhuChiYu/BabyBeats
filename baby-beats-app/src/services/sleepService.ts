@@ -1,5 +1,6 @@
 import { Sleep } from '../types';
 import { getDatabase, generateId, getCurrentTimestamp } from '../database';
+import { syncManager } from './syncManager';
 
 export class SleepService {
   // 创建睡眠记录
@@ -17,6 +18,8 @@ export class SleepService {
       createdAt: now,
       updatedAt: now,
     };
+    
+    console.log('😴 创建睡眠记录:', sleep.id, '时长:', duration, '分钟');
     
     await db.runAsync(
       `INSERT INTO sleeps (
@@ -37,7 +40,24 @@ export class SleepService {
       ]
     );
     
+    // 自动同步到服务器
+    this.autoSync(sleep).catch(err => {
+      console.warn('睡眠记录自动同步失败（不影响本地保存）:', err);
+    });
+    
     return sleep;
+  }
+  
+  // 自动同步单个记录到服务器
+  private static async autoSync(sleep: Sleep): Promise<void> {
+    if (!syncManager.isAutoSyncEnabled()) {
+      console.log('⏭️ 自动同步未启用，跳过睡眠记录同步');
+      return;
+    }
+    
+    console.log('🔄 自动同步睡眠记录到服务器:', sleep.id);
+    await syncManager.syncSleepToServer(sleep);
+    console.log('✅ 睡眠记录已自动同步到服务器');
   }
   
   // 获取宝宝的所有睡眠记录
@@ -81,6 +101,8 @@ export class SleepService {
   static async update(id: string, updates: Partial<Sleep>): Promise<void> {
     const db = await getDatabase();
     const now = getCurrentTimestamp();
+    
+    console.log('✏️ 更新睡眠记录:', id);
     
     // 如果更新了开始或结束时间，重新计算时长
     if (updates.startTime || updates.endTime) {
@@ -128,12 +150,26 @@ export class SleepService {
       `UPDATE sleeps SET ${fields.join(', ')} WHERE id = ?`,
       values
     );
+    
+    // 自动同步更新到服务器
+    const updated = await this.getById(id);
+    if (updated) {
+      this.autoSync(updated).catch(err => {
+        console.warn('睡眠记录更新同步失败（不影响本地保存）:', err);
+      });
+    }
   }
   
   // 删除睡眠记录
   static async delete(id: string): Promise<void> {
     const db = await getDatabase();
+    console.log('🗑️ 删除睡眠记录:', id);
     await db.runAsync('DELETE FROM sleeps WHERE id = ?', [id]);
+    
+    // TODO: 实现删除记录的同步（需要在服务器端添加删除接口）
+    if (syncManager.isAutoSyncEnabled()) {
+      console.log('💡 提示：删除操作需要手动同步才能同步到服务器');
+    }
   }
   
   // 根据ID获取睡眠记录

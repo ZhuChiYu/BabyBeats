@@ -1,5 +1,6 @@
 import { Feeding } from '../types';
 import { getDatabase, generateId, getCurrentTimestamp } from '../database';
+import { syncManager } from './syncManager';
 
 export class FeedingService {
   // 创建喂养记录
@@ -12,6 +13,8 @@ export class FeedingService {
       createdAt: now,
       updatedAt: now,
     };
+    
+    console.log('📝 创建喂养记录:', feeding.id, '类型:', feeding.type);
     
     await db.runAsync(
       `INSERT INTO feedings (
@@ -33,7 +36,24 @@ export class FeedingService {
       ]
     );
     
+    // 自动同步到服务器（异步，不阻塞）
+    this.autoSync(feeding).catch(err => {
+      console.warn('喂养记录自动同步失败（不影响本地保存）:', err);
+    });
+    
     return feeding;
+  }
+  
+  // 自动同步单个记录到服务器
+  private static async autoSync(feeding: Feeding): Promise<void> {
+    if (!syncManager.isAutoSyncEnabled()) {
+      console.log('⏭️ 自动同步未启用，跳过喂养记录同步');
+      return;
+    }
+    
+    console.log('🔄 自动同步喂养记录到服务器:', feeding.id);
+    await syncManager.syncFeedingToServer(feeding);
+    console.log('✅ 喂养记录已自动同步到服务器');
   }
   
   // 获取单条记录
@@ -89,6 +109,8 @@ export class FeedingService {
     const db = await getDatabase();
     const now = getCurrentTimestamp();
     
+    console.log('✏️ 更新喂养记录:', id);
+    
     const fields: string[] = [];
     const values: any[] = [];
     
@@ -129,12 +151,26 @@ export class FeedingService {
       `UPDATE feedings SET ${fields.join(', ')} WHERE id = ?`,
       values
     );
+    
+    // 自动同步更新到服务器
+    const updated = await this.getById(id);
+    if (updated) {
+      this.autoSync(updated).catch(err => {
+        console.warn('喂养记录更新同步失败（不影响本地保存）:', err);
+      });
+    }
   }
   
   // 删除喂养记录
   static async delete(id: string): Promise<void> {
     const db = await getDatabase();
+    console.log('🗑️ 删除喂养记录:', id);
     await db.runAsync('DELETE FROM feedings WHERE id = ?', [id]);
+    
+    // TODO: 实现删除记录的同步（需要在服务器端添加删除接口）
+    if (syncManager.isAutoSyncEnabled()) {
+      console.log('💡 提示：删除操作需要手动同步才能同步到服务器');
+    }
   }
   
   // 获取今日统计
