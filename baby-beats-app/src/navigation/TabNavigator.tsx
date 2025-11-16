@@ -2,6 +2,8 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { TabParamList } from './types';
 import { Ionicons } from '@expo/vector-icons';
+import { Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // 占位屏幕组件
 import { TodayScreen } from '../screens/TodayScreen';
@@ -13,6 +15,8 @@ import { SettingsScreen } from '../screens/SettingsScreen';
 const Tab = createBottomTabNavigator<TabParamList>();
 
 export const TabNavigator: React.FC = () => {
+  const insets = useSafeAreaInsets();
+  
   return (
     <Tab.Navigator
       screenOptions={{
@@ -22,9 +26,9 @@ export const TabNavigator: React.FC = () => {
         tabBarStyle: {
           borderTopWidth: 1,
           borderTopColor: '#E5E5EA',
-          paddingBottom: 8,
+          paddingBottom: Platform.OS === 'ios' ? insets.bottom : 8,
           paddingTop: 8,
-          height: 60,
+          height: (Platform.OS === 'ios' ? insets.bottom : 0) + 60,
         },
         tabBarLabelStyle: {
           fontSize: 12,

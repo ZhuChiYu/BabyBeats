@@ -16,7 +16,7 @@ const { width, height } = Dimensions.get('window');
 export const QuickActionMenu: React.FC = () => {
   const [visible, setVisible] = useState(false);
   const navigation = useNavigation<any>();
-  const fadeAnim = new Animated.Value(0);
+  const fadeAnim = React.useRef(new Animated.Value(0)).current;
   
   const showMenu = () => {
     setVisible(true);
