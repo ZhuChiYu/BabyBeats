@@ -1,6 +1,6 @@
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
-import { Feeding, Sleep, Diaper, Pumping, GrowthRecord } from '../types';
+import { Feeding, Sleep, Diaper, Pumping, GrowthRecord, Vaccine, Milestone, Medication, MedicalVisit } from '../types';
 import { format } from 'date-fns';
 
 /**
@@ -122,12 +122,87 @@ export const formatPumpingsForCSV = (pumpings: Pumping[]) => {
  */
 export const formatGrowthForCSV = (records: GrowthRecord[]) => {
   return records.map(r => ({
-    测量日期: format(new Date(r.measurementDate), 'yyyy-MM-dd'),
-    体重kg: r.weight,
-    身高cm: r.height,
-    头围cm: r.headCircumference || '',
+    测量日期: format(new Date(r.date || r.measurementDate), 'yyyy-MM-dd'),
+    体重kg: r.weight || '',
+    身高cm: r.height || '',
+    头围cm: r.headCirc || r.headCircumference || '',
+    '体温(C)': r.temperature || '',
     BMI: r.bmi || '',
     备注: r.notes || '',
+  }));
+};
+
+/**
+ * 格式化体温记录为CSV数据
+ */
+export const formatTemperaturesForCSV = (temperatures: any[]) => {
+  return temperatures.map(t => ({
+    测量时间: format(new Date(t.date), 'yyyy-MM-dd HH:mm'),
+    '体温(C)': t.temperature,
+    测量方式: t.measurementMethod || '',
+    状态: t.temperature >= 38 ? '发烧' : t.temperature >= 37.3 ? '低烧' : '正常',
+    备注: t.notes || '',
+  }));
+};
+
+/**
+ * 格式化疫苗记录为CSV数据
+ */
+export const formatVaccinesForCSV = (vaccines: Vaccine[]) => {
+  return vaccines.map(v => ({
+    疫苗名称: v.vaccineName,
+    接种日期: format(new Date(v.vaccinationDate), 'yyyy-MM-dd'),
+    剂次: v.doseNumber || '',
+    接种地点: v.location || '',
+    批次号: v.batchNumber || '',
+    下次接种: v.nextDate ? format(new Date(v.nextDate), 'yyyy-MM-dd') : '',
+    提醒开关: v.reminderEnabled ? '开启' : '关闭',
+    备注: v.notes || '',
+  }));
+};
+
+/**
+ * 格式化里程碑记录为CSV数据
+ */
+export const formatMilestonesForCSV = (milestones: Milestone[]) => {
+  return milestones.map(m => ({
+    时间: format(new Date(m.time), 'yyyy-MM-dd'),
+    类别: m.milestoneType,
+    标题: m.title,
+    描述: m.description || '',
+    有照片: m.photoUrl ? '是' : '否',
+  }));
+};
+
+/**
+ * 格式化用药记录为CSV数据
+ */
+export const formatMedicationsForCSV = (medications: Medication[]) => {
+  return medications.map(m => ({
+    用药时间: format(new Date(m.medicationTime), 'yyyy-MM-dd HH:mm'),
+    药品名称: m.medicationName,
+    剂量: m.dosage,
+    频次: m.frequency || '',
+    给药方式: m.administrationMethod || '',
+    开始日期: m.startDate ? format(new Date(m.startDate), 'yyyy-MM-dd') : '',
+    结束日期: m.endDate ? format(new Date(m.endDate), 'yyyy-MM-dd') : '',
+    备注: m.notes || '',
+  }));
+};
+
+/**
+ * 格式化就医记录为CSV数据
+ */
+export const formatMedicalVisitsForCSV = (visits: MedicalVisit[]) => {
+  return visits.map(v => ({
+    就诊时间: format(new Date(v.visitTime), 'yyyy-MM-dd HH:mm'),
+    医院: v.hospital || '',
+    科室: v.department || '',
+    医生: v.doctorName || '',
+    症状: v.symptoms || '',
+    诊断: v.diagnosis || '',
+    医嘱: v.doctorAdvice || '',
+    备注: v.notes || '',
   }));
 };
 
@@ -141,6 +216,11 @@ export const exportAllData = async (data: {
   diapers: Diaper[];
   pumpings: Pumping[];
   growthRecords: GrowthRecord[];
+  temperatures?: any[];
+  vaccines?: Vaccine[];
+  milestones?: Milestone[];
+  medications?: Medication[];
+  medicalVisits?: MedicalVisit[];
 }, format: 'csv' | 'json' = 'json'): Promise<void> => {
   const timestamp = new Date().getTime();
   const filename = `BabyBeats_${data.baby.name}_${timestamp}`;
@@ -163,6 +243,21 @@ export const exportAllData = async (data: {
     }
     if (data.growthRecords.length > 0) {
       await exportToCSV(formatGrowthForCSV(data.growthRecords), `${filename}_成长`);
+    }
+    if (data.temperatures && data.temperatures.length > 0) {
+      await exportToCSV(formatTemperaturesForCSV(data.temperatures), `${filename}_体温`);
+    }
+    if (data.vaccines && data.vaccines.length > 0) {
+      await exportToCSV(formatVaccinesForCSV(data.vaccines), `${filename}_疫苗`);
+    }
+    if (data.milestones && data.milestones.length > 0) {
+      await exportToCSV(formatMilestonesForCSV(data.milestones), `${filename}_里程碑`);
+    }
+    if (data.medications && data.medications.length > 0) {
+      await exportToCSV(formatMedicationsForCSV(data.medications), `${filename}_用药`);
+    }
+    if (data.medicalVisits && data.medicalVisits.length > 0) {
+      await exportToCSV(formatMedicalVisitsForCSV(data.medicalVisits), `${filename}_就医`);
     }
   }
 };
