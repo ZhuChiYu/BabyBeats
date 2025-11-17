@@ -19,7 +19,7 @@ interface BabyManagementScreenProps {
 }
 
 export const BabyManagementScreen: React.FC<BabyManagementScreenProps> = ({ navigation }) => {
-  const { babies, currentBabyId, setCurrentBabyId, removeBaby, setBabies } = useBabyStore();
+  const { babies, currentBabyId, setCurrentBaby, removeBaby, setBabies } = useBabyStore();
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -58,9 +58,9 @@ export const BabyManagementScreen: React.FC<BabyManagementScreenProps> = ({ navi
               if (currentBabyId === babyId) {
                 const activeBabies = babies.filter(b => !b.isArchived && b.id !== babyId);
                 if (activeBabies.length > 0) {
-                  setCurrentBabyId(activeBabies[0].id);
+                  setCurrentBaby(activeBabies[0].id);
                 } else {
-                  setCurrentBabyId(null);
+                  setCurrentBaby(null);
                 }
               }
               
@@ -95,9 +95,9 @@ export const BabyManagementScreen: React.FC<BabyManagementScreenProps> = ({ navi
               if (currentBabyId === babyId) {
                 const remainingBabies = babies.filter(b => b.id !== babyId);
                 if (remainingBabies.length > 0) {
-                  setCurrentBabyId(remainingBabies[0].id);
+                  setCurrentBaby(remainingBabies[0].id);
                 } else {
-                  setCurrentBabyId(null);
+                  setCurrentBaby(null);
                 }
               }
             } catch (error) {
@@ -150,6 +150,7 @@ export const BabyManagementScreen: React.FC<BabyManagementScreenProps> = ({ navi
     }
   };
 
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -185,7 +186,7 @@ export const BabyManagementScreen: React.FC<BabyManagementScreenProps> = ({ navi
                   <TouchableOpacity
                     style={styles.babyCardLeft}
                     onPress={() => {
-                      setCurrentBabyId(baby.id);
+                      setCurrentBaby(baby.id);
                       navigation.goBack();
                     }}
                   >
@@ -304,7 +305,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#000',
+    color: '#000000',
   },
   addButton: {
     padding: 4,
@@ -318,7 +319,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#000',
+    color: '#000000',
     paddingHorizontal: 16,
     marginBottom: 12,
   },
@@ -366,7 +367,7 @@ const styles = StyleSheet.create({
   babyName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#000',
+    color: '#000000',
     marginRight: 8,
   },
   currentBadge: {
@@ -386,7 +387,7 @@ const styles = StyleSheet.create({
     color: '#8E8E93',
   },
   archivedText: {
-    color: '#C7C7CC',
+    color: '#8E8E93',
   },
   babyActions: {
     flexDirection: 'row',
