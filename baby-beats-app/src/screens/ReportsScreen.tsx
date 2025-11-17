@@ -18,6 +18,7 @@ import { DiaperService } from '../services/diaperService';
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, subWeeks, subMonths } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import { Colors } from '../constants';
+import { useFocusEffect } from '@react-navigation/native';
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -58,6 +59,15 @@ export const ReportsScreen: React.FC = () => {
       loadReport();
     }
   }, [currentBaby?.id, reportType]);
+
+  // 监听页面聚焦，自动刷新数据
+  useFocusEffect(
+    React.useCallback(() => {
+      if (currentBaby) {
+        loadReport();
+      }
+    }, [currentBaby?.id, reportType])
+  );
   
   const loadReport = async () => {
     if (!currentBaby) return;
@@ -135,6 +145,7 @@ export const ReportsScreen: React.FC = () => {
     color: string,
     stats: { label: string; value: string | number }[]
   ) => {
+
     return (
       <View style={styles.statCard}>
         <View style={styles.statHeader}>
@@ -293,7 +304,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#000',
+    color: '#000000',
     marginBottom: 12,
   },
   reportTypeSelector: {
@@ -340,7 +351,7 @@ const styles = StyleSheet.create({
   periodText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#000',
+    color: '#000000',
   },
   statCard: {
     backgroundColor: '#FFFFFF',
@@ -369,7 +380,7 @@ const styles = StyleSheet.create({
   statTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#000',
+    color: '#000000',
   },
   statContent: {
     flexDirection: 'row',
@@ -387,7 +398,7 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#000',
+    color: '#000000',
   },
   chartCard: {
     backgroundColor: '#FFFFFF',
@@ -403,7 +414,7 @@ const styles = StyleSheet.create({
   chartTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#000',
+    color: '#000000',
     marginBottom: 16,
   },
   chart: {

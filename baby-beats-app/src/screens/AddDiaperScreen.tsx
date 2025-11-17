@@ -344,7 +344,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#000',
+    color: '#000000',
     marginBottom: 12,
   },
   typeButtons: {
@@ -407,7 +407,7 @@ const styles = StyleSheet.create({
   },
   checkboxText: {
     fontSize: 16,
-    color: '#000',
+    color: '#000000',
     marginLeft: 12,
   },
   input: {
@@ -415,7 +415,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
-    color: '#000',
+    color: '#000000',
   },
   notesInput: {
     height: 100,

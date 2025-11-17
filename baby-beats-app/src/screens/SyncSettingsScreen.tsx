@@ -372,6 +372,7 @@ export const SyncSettingsScreen: React.FC<SyncSettingsScreenProps> = ({ navigati
     console.log('Updating local data with:', pullResult);
   };
 
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -567,7 +568,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#000',
+    color: '#000000',
   },
   content: {
     flex: 1,
@@ -592,7 +593,7 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#000',
+    color: '#000000',
     marginLeft: 8,
   },
   inputGroup: {
@@ -601,7 +602,7 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#000',
+    color: '#000000',
     marginBottom: 8,
   },
   input: {
@@ -609,7 +610,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
-    color: '#000',
+    color: '#000000',
   },
   buttonRow: {
     flexDirection: 'row',
@@ -651,7 +652,7 @@ const styles = StyleSheet.create({
   },
   loginInfoText: {
     fontSize: 15,
-    color: '#3C3C43',
+    color: '#8E8E93',
     marginLeft: 12,
   },
   logoutButton: {
@@ -677,7 +678,7 @@ const styles = StyleSheet.create({
   settingTitle: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#000',
+    color: '#000000',
     marginBottom: 4,
   },
   settingDescription: {
@@ -713,7 +714,7 @@ const styles = StyleSheet.create({
   },
   statsText: {
     fontSize: 15,
-    color: '#3C3C43',
+    color: '#8E8E93',
     paddingVertical: 8,
   },
   infoCard: {
@@ -728,7 +729,7 @@ const styles = StyleSheet.create({
   infoText: {
     flex: 1,
     fontSize: 14,
-    color: '#3C3C43',
+    color: '#8E8E93',
     lineHeight: 20,
   },
 });

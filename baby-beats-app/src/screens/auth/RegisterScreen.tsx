@@ -21,7 +21,8 @@ interface RegisterScreenProps {
   navigation: any;
 }
 
-export const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
+export const RegisterScreen: React.FC<RegisterScreenProps> = ({
+ navigation }) => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -70,6 +71,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) =>
       setLoading(false);
     }
   };
+
 
   return (
     <SafeAreaView style={styles.container}>
@@ -211,7 +213,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#000',
+    color: '#000000',
     marginBottom: 8,
   },
   subtitle: {
@@ -238,7 +240,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 50,
     fontSize: 16,
-    color: '#000',
+    color: '#000000',
   },
   eyeIcon: {
     padding: 8,

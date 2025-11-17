@@ -20,7 +20,8 @@ interface LoginScreenProps {
   navigation: any;
 }
 
-export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
+export const LoginScreen: React.FC<LoginScreenProps> = ({
+ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -50,6 +51,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   const handleRegister = () => {
     navigation.navigate('Register');
   };
+
 
   return (
     <SafeAreaView style={styles.container}>
@@ -142,7 +144,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#000',
+    color: '#000000',
     marginTop: 16,
   },
   subtitle: {
@@ -170,7 +172,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 50,
     fontSize: 16,
-    color: '#000',
+    color: '#000000',
   },
   eyeIcon: {
     padding: 8,

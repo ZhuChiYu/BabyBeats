@@ -98,6 +98,7 @@ export const EditPumpingScreen: React.FC<EditPumpingScreenProps> = ({ navigation
   };
   
   if (loading) {
+
     return (
       <SafeAreaView style={styles.container}>
         <ActivityIndicator size="large" color={Colors.primary} style={{ marginTop: 100 }} />
@@ -260,7 +261,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#000',
+    color: '#000000',
     marginBottom: 12,
   },
   typeButtons: {
@@ -331,7 +332,7 @@ const styles = StyleSheet.create({
   },
   totalLabel: {
     fontSize: 18,
-    color: '#000',
+    color: '#000000',
     fontWeight: '600',
   },
   totalValue: {
@@ -374,7 +375,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
-    color: '#000',
+    color: '#000000',
   },
   notesInput: {
     height: 100,

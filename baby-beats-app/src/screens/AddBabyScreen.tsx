@@ -23,7 +23,7 @@ interface AddBabyScreenProps {
 }
 
 export const AddBabyScreen: React.FC<AddBabyScreenProps> = ({ navigation }) => {
-  const { addBaby, setCurrentBabyId } = useBabyStore();
+  const { addBaby, setCurrentBaby } = useBabyStore();
 
   const [name, setName] = useState('');
   const [gender, setGender] = useState<'male' | 'female' | 'unknown'>('unknown');
@@ -57,7 +57,7 @@ export const AddBabyScreen: React.FC<AddBabyScreenProps> = ({ navigation }) => {
 
       // 添加到 store 并设为当前宝宝
       addBaby(baby);
-      setCurrentBabyId(baby.id);
+      setCurrentBaby(baby.id);
 
       // 关闭页面
       navigation.goBack();
@@ -243,7 +243,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#000',
+    color: '#000000',
     marginBottom: 12,
   },
   input: {
@@ -251,7 +251,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
-    color: '#000',
+    color: '#000000',
   },
   genderButtons: {
     flexDirection: 'row',
@@ -291,7 +291,7 @@ const styles = StyleSheet.create({
   },
   dateButtonText: {
     fontSize: 16,
-    color: '#000',
+    color: '#000000',
   },
   bloodTypeButtons: {
     flexDirection: 'row',

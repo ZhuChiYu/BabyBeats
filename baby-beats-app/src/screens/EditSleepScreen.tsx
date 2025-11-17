@@ -100,6 +100,7 @@ export const EditSleepScreen: React.FC<EditSleepScreenProps> = ({ navigation, ro
   };
   
   if (loading) {
+
     return (
       <SafeAreaView style={styles.container}>
         <ActivityIndicator size="large" color={Colors.primary} style={{ marginTop: 100 }} />
@@ -255,7 +256,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#000',
+    color: '#000000',
     marginBottom: 12,
   },
   typeButtons: {
@@ -296,7 +297,7 @@ const styles = StyleSheet.create({
   },
   timeButtonText: {
     fontSize: 16,
-    color: '#000',
+    color: '#000000',
   },
   durationDisplay: {
     backgroundColor: '#E3F2FD',
@@ -314,7 +315,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
-    color: '#000',
+    color: '#000000',
   },
   textArea: {
     height: 100,

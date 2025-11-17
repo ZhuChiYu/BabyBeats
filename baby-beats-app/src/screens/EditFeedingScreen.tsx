@@ -121,6 +121,7 @@ export const EditFeedingScreen: React.FC<EditFeedingScreenProps> = ({ navigation
   };
   
   if (loading) {
+
     return (
       <SafeAreaView style={styles.container}>
         <ActivityIndicator size="large" color={Colors.primary} style={{ marginTop: 100 }} />
@@ -287,7 +288,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#000',
+    color: '#000000',
     marginBottom: 12,
   },
   typeSelector: {
@@ -326,7 +327,7 @@ const styles = StyleSheet.create({
   },
   timeButtonText: {
     fontSize: 16,
-    color: '#000',
+    color: '#000000',
   },
   durationRow: {
     flexDirection: 'row',
@@ -345,7 +346,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     fontSize: 16,
-    color: '#000',
+    color: '#000000',
   },
   textArea: {
     minHeight: 100,

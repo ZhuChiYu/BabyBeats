@@ -56,6 +56,7 @@ export const HelpScreen: React.FC<HelpScreenProps> = ({ navigation }) => {
     });
   };
 
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -243,7 +244,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#000',
+    color: '#000000',
   },
   content: {
     flex: 1,
@@ -256,7 +257,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#000',
+    color: '#000000',
     marginBottom: 16,
   },
   faqItem: {
@@ -265,13 +266,13 @@ const styles = StyleSheet.create({
   faqQuestion: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#000',
+    color: '#000000',
     marginBottom: 8,
   },
   faqAnswer: {
     fontSize: 14,
     lineHeight: 20,
-    color: '#3C3C43',
+    color: '#8E8E93',
   },
   featureItem: {
     flexDirection: 'row',
@@ -285,7 +286,7 @@ const styles = StyleSheet.create({
   featureTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#000',
+    color: '#000000',
     marginBottom: 4,
   },
   featureDesc: {
@@ -303,7 +304,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     fontSize: 14,
-    color: '#000',
+    color: '#000000',
     minHeight: 120,
     marginBottom: 12,
   },
@@ -312,7 +313,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     fontSize: 14,
-    color: '#000',
+    color: '#000000',
     marginBottom: 16,
   },
   submitButton: {
@@ -322,7 +323,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   submitButtonDisabled: {
-    backgroundColor: '#C7C7CC',
+    backgroundColor: '#8E8E93',
   },
   submitButtonText: {
     fontSize: 16,

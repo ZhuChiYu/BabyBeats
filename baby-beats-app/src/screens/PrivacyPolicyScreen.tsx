@@ -15,6 +15,7 @@ interface PrivacyPolicyScreenProps {
 }
 
 export const PrivacyPolicyScreen: React.FC<PrivacyPolicyScreenProps> = ({ navigation }) => {
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -118,7 +119,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#000',
+    color: '#000000',
   },
   content: {
     flex: 1,
@@ -131,13 +132,13 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#000',
+    color: '#000000',
     marginBottom: 12,
   },
   text: {
     fontSize: 14,
     lineHeight: 22,
-    color: '#3C3C43',
+    color: '#8E8E93',
   },
   footer: {
     alignItems: 'center',

@@ -118,6 +118,7 @@ ${feedingStats?.totalAmount ? `• 总奶量：${feedingStats.totalAmount}ml\n` 
     },
   };
 
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -352,7 +353,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#000',
+    color: '#000000',
   },
   shareButton: {
     padding: 4,
@@ -398,7 +399,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#000',
+    color: '#000000',
     marginBottom: 16,
   },
   summaryGrid: {
@@ -438,7 +439,7 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#000',
+    color: '#000000',
     marginLeft: 8,
   },
   chartContainer: {
@@ -466,7 +467,7 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#000',
+    color: '#000000',
   },
   reportFooter: {
     marginTop: 24,

@@ -11,6 +11,7 @@ import { PumpingService } from '../services/pumpingService';
 import { format, subDays, startOfDay, endOfDay, differenceInDays } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import { Colors } from '../constants';
+import { useFocusEffect } from '@react-navigation/native';
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -47,6 +48,15 @@ export const StatsScreen: React.FC<StatsScreenProps> = ({ navigation }) => {
       loadStats();
     }
   }, [currentBaby?.id, timeRange, customStartDate, customEndDate]);
+
+  // 监听页面聚焦，自动刷新数据
+  useFocusEffect(
+    React.useCallback(() => {
+      if (currentBaby) {
+        loadStats();
+      }
+    }, [currentBaby?.id, timeRange, customStartDate, customEndDate])
+  );
   
   const loadStats = async () => {
     if (!currentBaby) return;
@@ -293,6 +303,7 @@ export const StatsScreen: React.FC<StatsScreenProps> = ({ navigation }) => {
   };
   
   if (!currentBaby) {
+
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.emptyContainer}>
@@ -541,7 +552,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#000',
+    color: '#000000',
   },
   reportButton: {
     flexDirection: 'row',
@@ -612,7 +623,7 @@ const styles = StyleSheet.create({
   chartTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#000',
+    color: '#000000',
     marginLeft: 8,
   },
   chartUnit: {
@@ -663,7 +674,7 @@ const styles = StyleSheet.create({
   },
   dateButtonText: {
     fontSize: 13,
-    color: '#000',
+    color: '#000000',
     fontWeight: '600',
     flex: 1,
   },
@@ -690,7 +701,7 @@ const styles = StyleSheet.create({
   datePickerTitle: {
     fontSize: 17,
     fontWeight: '600',
-    color: '#000',
+    color: '#000000',
   },
   datePickerButton: {
     fontSize: 16,

@@ -218,6 +218,7 @@ export const LogScreen: React.FC<LogScreenProps> = ({ navigation }) => {
   });
   
   if (!currentBaby) {
+
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.emptyContainer}>
@@ -389,7 +390,7 @@ const styles = StyleSheet.create({
   recordTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#000',
+    color: '#000000',
     marginBottom: 4,
   },
   recordTime: {
