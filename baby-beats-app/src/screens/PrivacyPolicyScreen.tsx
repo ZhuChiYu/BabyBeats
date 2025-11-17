@@ -88,7 +88,7 @@ export const PrivacyPolicyScreen: React.FC<PrivacyPolicyScreenProps> = ({ naviga
         </View>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>最后更新：2024年11月</Text>
+          <Text style={styles.footerText}>最后更新：2025年10月</Text>
           <Text style={styles.footerText}>BabyBeats v1.0.0</Text>
         </View>
 
