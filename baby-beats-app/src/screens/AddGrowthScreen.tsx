@@ -24,6 +24,7 @@ interface AddGrowthScreenProps {
   route?: {
     params?: {
       type?: 'weight' | 'height' | 'head';
+      editingRecord?: any;
     };
   };
 }
@@ -32,14 +33,17 @@ export const AddGrowthScreen: React.FC<AddGrowthScreenProps> = ({ navigation, ro
   const { getCurrentBaby } = useBabyStore();
   const currentBaby = getCurrentBaby();
 
+  const editingRecord = route?.params?.editingRecord;
   const initialType = route?.params?.type || 'weight';
   
-  const [measurementDate, setMeasurementDate] = useState(new Date());
+  const [measurementDate, setMeasurementDate] = useState(
+    editingRecord ? new Date(editingRecord.date) : new Date()
+  );
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [weight, setWeight] = useState('');
-  const [height, setHeight] = useState('');
-  const [headCircumference, setHeadCircumference] = useState('');
-  const [notes, setNotes] = useState('');
+  const [weight, setWeight] = useState(editingRecord?.weight?.toString() || '');
+  const [height, setHeight] = useState(editingRecord?.height?.toString() || '');
+  const [headCircumference, setHeadCircumference] = useState(editingRecord?.headCirc?.toString() || '');
+  const [notes, setNotes] = useState(editingRecord?.notes || '');
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
@@ -59,14 +63,26 @@ export const AddGrowthScreen: React.FC<AddGrowthScreenProps> = ({ navigation, ro
 
     setSaving(true);
     try {
-      await GrowthService.create({
-        babyId: currentBaby.id,
-        date: measurementDate.getTime(),
-        weight: weightNum || undefined,
-        height: heightNum || undefined,
-        headCirc: headNum || undefined,
-        notes: notes || undefined,
-      });
+      if (editingRecord) {
+        // 更新记录
+        await GrowthService.update(editingRecord.id, {
+          date: measurementDate.getTime(),
+          weight: weightNum || undefined,
+          height: heightNum || undefined,
+          headCirc: headNum || undefined,
+          notes: notes || undefined,
+        });
+      } else {
+        // 创建新记录
+        await GrowthService.create({
+          babyId: currentBaby.id,
+          date: measurementDate.getTime(),
+          weight: weightNum || undefined,
+          height: heightNum || undefined,
+          headCirc: headNum || undefined,
+          notes: notes || undefined,
+        });
+      }
 
       // 关闭页面
       navigation.goBack();
@@ -78,7 +94,33 @@ export const AddGrowthScreen: React.FC<AddGrowthScreenProps> = ({ navigation, ro
     }
   };
 
+  const handleDelete = async () => {
+    if (!editingRecord) return;
+
+    Alert.alert(
+      '确认删除',
+      '确定要删除这条成长记录吗？',
+      [
+        { text: '取消', style: 'cancel' },
+        {
+          text: '删除',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await GrowthService.delete(editingRecord.id);
+              navigation.goBack();
+            } catch (error) {
+              console.error('Failed to delete growth record:', error);
+              Alert.alert('错误', '删除失败，请重试');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   if (!currentBaby) {
+
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.emptyContainer}>
@@ -92,7 +134,7 @@ export const AddGrowthScreen: React.FC<AddGrowthScreenProps> = ({ navigation, ro
   return (
     <SafeAreaView style={styles.container}>
       <ModalHeader
-        title="添加成长记录"
+        title={editingRecord ? "编辑成长记录" : "添加成长记录"}
         onCancel={() => navigation.goBack()}
         onSave={handleSave}
         saving={saving}
@@ -189,6 +231,19 @@ export const AddGrowthScreen: React.FC<AddGrowthScreenProps> = ({ navigation, ro
           />
         </View>
 
+        {/* 删除按钮 (仅在编辑模式显示) */}
+        {editingRecord && (
+          <View style={styles.section}>
+            <TouchableOpacity
+              style={styles.deleteButton}
+              onPress={handleDelete}
+            >
+              <Ionicons name="trash-outline" size={20} color="#FF3B30" />
+              <Text style={styles.deleteButtonText}>删除成长记录</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         <View style={{ height: 40 }} />
       </ScrollView>
     </SafeAreaView>
@@ -210,7 +265,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#000',
+    color: '#000000',
     marginBottom: 12,
   },
   dateButton: {
@@ -223,7 +278,7 @@ const styles = StyleSheet.create({
   },
   dateButtonText: {
     fontSize: 16,
-    color: '#000',
+    color: '#000000',
   },
   inputContainer: {
     flexDirection: 'row',
@@ -238,7 +293,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     fontSize: 16,
-    color: '#000',
+    color: '#000000',
   },
   unit: {
     fontSize: 16,
@@ -268,6 +323,22 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#FFFFFF',
+  },
+  deleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFF5F5',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#FFE5E5',
+    gap: 8,
+  },
+  deleteButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FF3B30',
   },
   emptyContainer: {
     flex: 1,

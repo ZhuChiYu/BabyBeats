@@ -153,6 +153,23 @@ export const GrowthScreen: React.FC<GrowthScreenProps> = ({ navigation }) => {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {/* 里程碑入口 */}
+        <TouchableOpacity
+          style={styles.milestoneButton}
+          onPress={() => navigation.navigate('MilestoneTimeline')}
+        >
+          <View style={styles.milestoneButtonLeft}>
+            <View style={styles.milestoneIcon}>
+              <Ionicons name="star" size={24} color="#FFD60A" />
+            </View>
+            <View>
+              <Text style={styles.milestoneButtonTitle}>成长里程碑</Text>
+              <Text style={styles.milestoneButtonSubtitle}>记录宝宝的珍贵瞬间</Text>
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={24} color="#C7C7CC" />
+        </TouchableOpacity>
+
         {/* 宝宝信息卡片 */}
         <View style={styles.babyInfoCard}>
           <View style={styles.babyInfoRow}>
@@ -252,23 +269,28 @@ export const GrowthScreen: React.FC<GrowthScreenProps> = ({ navigation }) => {
           
           {records.length > 0 ? (
             records.slice(0, 10).map((record, index) => (
-              <View key={record.id} style={styles.recordItem}>
+              <TouchableOpacity 
+                key={record.id} 
+                style={styles.recordItem}
+                onPress={() => navigation.navigate('AddGrowth', { editingRecord: record })}
+              >
                 <View style={styles.recordLeft}>
                   <View style={[styles.recordIndicator, { backgroundColor: typeInfo.color }]} />
-                  <View>
+                  <View style={styles.recordInfo}>
                     <Text style={styles.recordDate}>
                       {format(new Date(record.date), 'yyyy年MM月dd日', { locale: zhCN })}
                     </Text>
                     <View style={styles.recordValues}>
-                      <Text style={styles.recordValue}>体重 {record.weight}kg</Text>
-                      <Text style={styles.recordValue}>身高 {record.height}cm</Text>
-                      {record.headCircumference && (
-                        <Text style={styles.recordValue}>头围 {record.headCircumference}cm</Text>
+                      {record.weight && <Text style={styles.recordValue}>体重 {record.weight}kg</Text>}
+                      {record.height && <Text style={styles.recordValue}>身高 {record.height}cm</Text>}
+                      {record.headCirc && (
+                        <Text style={styles.recordValue}>头围 {record.headCirc}cm</Text>
                       )}
                     </View>
                   </View>
                 </View>
-              </View>
+                <Ionicons name="chevron-forward" size={20} color="#C7C7CC" />
+              </TouchableOpacity>
             ))
           ) : (
             <View style={styles.emptyRecordsContainer}>
@@ -446,6 +468,9 @@ const styles = StyleSheet.create({
     color: '#8E8E93',
   },
   recordItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#F5F5F7',
@@ -453,6 +478,10 @@ const styles = StyleSheet.create({
   recordLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
+  },
+  recordInfo: {
+    flex: 1,
   },
   recordIndicator: {
     width: 4,
@@ -511,5 +540,44 @@ const styles = StyleSheet.create({
   },
   footer: {
     height: 100,
+  },
+  milestoneButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: 16,
+    marginTop: 16,
+    padding: 16,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  milestoneButtonLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  milestoneIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#FFD60A15',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  milestoneButtonTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#000',
+  },
+  milestoneButtonSubtitle: {
+    fontSize: 14,
+    color: '#8E8E93',
+    marginTop: 2,
   },
 });
