@@ -106,7 +106,35 @@ export const HelpScreen: React.FC<HelpScreenProps> = ({ navigation }) => {
           <View style={styles.faqItem}>
             <Text style={styles.faqQuestion}>Q: 如何编辑或删除记录？</Text>
             <Text style={styles.faqAnswer}>
-              在"记录"页面中，点击记录可以编辑，点击右侧垃圾桶图标可以删除。
+              在各个列表页面中，直接点击记录条目即可进入编辑页面。编辑页面中可以修改信息或删除记录。
+            </Text>
+          </View>
+
+          <View style={styles.faqItem}>
+            <Text style={styles.faqQuestion}>Q: 如何设置疫苗和用药提醒？</Text>
+            <Text style={styles.faqAnswer}>
+              添加疫苗时设置"下次接种日期"，添加用药时设置"用药频次"，系统会自动发送通知提醒。首次使用需授权通知权限。
+            </Text>
+          </View>
+
+          <View style={styles.faqItem}>
+            <Text style={styles.faqQuestion}>Q: 成长数据如何查看趋势？</Text>
+            <Text style={styles.faqAnswer}>
+              在"成长"页面可以切换查看体重、身高、头围的成长曲线图，点击历史记录可以编辑或删除。
+            </Text>
+          </View>
+
+          <View style={styles.faqItem}>
+            <Text style={styles.faqQuestion}>Q: 如何记录宝宝的里程碑？</Text>
+            <Text style={styles.faqAnswer}>
+              在"成长"页面顶部点击"成长里程碑"，可以选择预设的60+里程碑或自定义添加，支持上传照片记录珍贵瞬间。
+            </Text>
+          </View>
+
+          <View style={styles.faqItem}>
+            <Text style={styles.faqQuestion}>Q: 可以同时管理多个宝宝吗？</Text>
+            <Text style={styles.faqAnswer}>
+              可以。点击首页左上角宝宝名称即可快速切换，也可以通过"设置" → "宝宝管理"添加或管理多个宝宝。
             </Text>
           </View>
         </View>
@@ -160,7 +188,152 @@ export const HelpScreen: React.FC<HelpScreenProps> = ({ navigation }) => {
             <View style={styles.featureText}>
               <Text style={styles.featureTitle}>成长追踪</Text>
               <Text style={styles.featureDesc}>
-                记录体重、身高、头围等成长数据，查看成长曲线
+                记录体重、身高、头围等成长数据，查看成长曲线，支持编辑删除
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.featureItem}>
+            <Ionicons name="medical" size={24} color="#FF6B6B" />
+            <View style={styles.featureText}>
+              <Text style={styles.featureTitle}>健康管理</Text>
+              <Text style={styles.featureDesc}>
+                体温记录、疫苗接种、用药管理、就医记录，一站式健康管理
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.featureItem}>
+            <Ionicons name="thermometer" size={24} color="#E74C3C" />
+            <View style={styles.featureText}>
+              <Text style={styles.featureTitle}>体温监测</Text>
+              <Text style={styles.featureDesc}>
+                支持腋温、口温、耳温、额温等多种测量方式，趋势图展示
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.featureItem}>
+            <Ionicons name="shield-checkmark" size={24} color="#5AC8FA" />
+            <View style={styles.featureText}>
+              <Text style={styles.featureTitle}>疫苗管理</Text>
+              <Text style={styles.featureDesc}>
+                15种预设疫苗，自动提醒接种时间，记录接种医院和批次
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.featureItem}>
+            <Ionicons name="medkit" size={24} color="#FF9500" />
+            <View style={styles.featureText}>
+              <Text style={styles.featureTitle}>用药记录</Text>
+              <Text style={styles.featureDesc}>
+                智能频次解析（每天3次、每8小时等），多次提醒，记录用药明细
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.featureItem}>
+            <Ionicons name="fitness" size={24} color="#3498DB" />
+            <View style={styles.featureText}>
+              <Text style={styles.featureTitle}>就医记录</Text>
+              <Text style={styles.featureDesc}>
+                15个科室、18种症状，记录诊断和处方，历史就医查询
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.featureItem}>
+            <Ionicons name="star" size={24} color="#FFD60A" />
+            <View style={styles.featureText}>
+              <Text style={styles.featureTitle}>成长里程碑</Text>
+              <Text style={styles.featureDesc}>
+                8大类60+预设里程碑（第一次笑、第一次翻身等），支持照片上传
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.featureItem}>
+            <Ionicons name="analytics" size={24} color="#007AFF" />
+            <View style={styles.featureText}>
+              <Text style={styles.featureTitle}>数据统计</Text>
+              <Text style={styles.featureDesc}>
+                7天/14天/30天/3个月统计，图表展示，实时刷新
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.featureItem}>
+            <Ionicons name="share" size={24} color="#5856D6" />
+            <View style={styles.featureText}>
+              <Text style={styles.featureTitle}>数据导出</Text>
+              <Text style={styles.featureDesc}>
+                支持10种数据类型导出为CSV/JSON格式，方便备份和分享
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* 使用技巧 */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>使用技巧</Text>
+          
+          <View style={styles.tipItem}>
+            <View style={styles.tipIcon}>
+              <Ionicons name="bulb" size={20} color="#FFD60A" />
+            </View>
+            <View style={styles.tipContent}>
+              <Text style={styles.tipTitle}>快速添加记录</Text>
+              <Text style={styles.tipDesc}>
+                首页快捷按钮可快速添加常用记录，长按可选择更多类型
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.tipItem}>
+            <View style={styles.tipIcon}>
+              <Ionicons name="bulb" size={20} color="#FFD60A" />
+            </View>
+            <View style={styles.tipContent}>
+              <Text style={styles.tipTitle}>中文月份显示</Text>
+              <Text style={styles.tipDesc}>
+                所有日期时间选择器都使用中文显示，更符合使用习惯
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.tipItem}>
+            <View style={styles.tipIcon}>
+              <Ionicons name="bulb" size={20} color="#FFD60A" />
+            </View>
+            <View style={styles.tipContent}>
+              <Text style={styles.tipTitle}>下拉刷新</Text>
+              <Text style={styles.tipDesc}>
+                在首页下拉可以刷新所有数据，确保显示最新信息
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.tipItem}>
+            <View style={styles.tipIcon}>
+              <Ionicons name="bulb" size={20} color="#FFD60A" />
+            </View>
+            <View style={styles.tipContent}>
+              <Text style={styles.tipTitle}>宝宝年龄显示</Text>
+              <Text style={styles.tipDesc}>
+                首页自动显示宝宝年龄：不到1月显示天数，1月-1年显示月天，1年以上显示年月天
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.tipItem}>
+            <View style={styles.tipIcon}>
+              <Ionicons name="bulb" size={20} color="#FFD60A" />
+            </View>
+            <View style={styles.tipContent}>
+              <Text style={styles.tipTitle}>定期备份</Text>
+              <Text style={styles.tipDesc}>
+                建议每月使用"数据导出"功能备份宝宝数据，防止意外丢失
               </Text>
             </View>
           </View>
@@ -339,6 +512,34 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.primary,
     marginLeft: 8,
+  },
+  tipItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+  },
+  tipIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#FFF9E6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  tipContent: {
+    flex: 1,
+  },
+  tipTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#000000',
+    marginBottom: 4,
+  },
+  tipDesc: {
+    fontSize: 12,
+    lineHeight: 18,
+    color: '#8E8E93',
   },
 });
 
