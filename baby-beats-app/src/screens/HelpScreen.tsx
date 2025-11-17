@@ -210,10 +210,10 @@ export const HelpScreen: React.FC<HelpScreenProps> = ({ navigation }) => {
           <Text style={styles.sectionTitle}>联系我们</Text>
           <TouchableOpacity
             style={styles.contactItem}
-            onPress={() => openLink('mailto:support@babybeats.app')}
+            onPress={() => openLink('mailto:zhu.cy@outlook.com')}
           >
             <Ionicons name="mail-outline" size={20} color={Colors.primary} />
-            <Text style={styles.contactText}>support@babybeats.app</Text>
+            <Text style={styles.contactText}>zhu.cy@outlook.com</Text>
           </TouchableOpacity>
         </View>
 
