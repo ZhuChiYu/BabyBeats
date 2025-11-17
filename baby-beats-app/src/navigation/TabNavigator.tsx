@@ -10,6 +10,7 @@ import { TodayScreen } from '../screens/TodayScreen';
 import { LogScreen } from '../screens/LogScreen';
 import { StatsScreen } from '../screens/StatsScreen';
 import { GrowthScreen } from '../screens/GrowthScreen';
+import { HealthScreen } from '../screens/HealthScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 
 const Tab = createBottomTabNavigator<TabParamList>();
@@ -73,6 +74,16 @@ export const TabNavigator: React.FC = () => {
           title: '成长',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="trending-up" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Health"
+        component={HealthScreen}
+        options={{
+          title: '健康',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="medical" size={size} color={color} />
           ),
         }}
       />

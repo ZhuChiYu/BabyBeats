@@ -19,15 +19,23 @@ import { PrivacyPolicyScreen } from './src/screens/PrivacyPolicyScreen';
 import { TermsScreen } from './src/screens/TermsScreen';
 import { HelpScreen } from './src/screens/HelpScreen';
 import { SyncSettingsScreen } from './src/screens/SyncSettingsScreen';
-import { ThemeSettingsScreen } from './src/screens/ThemeSettingsScreen';
-import { LanguageSettingsScreen } from './src/screens/LanguageSettingsScreen';
+import { FontSizeSettingsScreen } from './src/screens/FontSizeSettingsScreen';
 import { StatsReportScreen } from './src/screens/StatsReportScreen';
-import { ThemeProvider } from './src/contexts/ThemeContext';
-import { LanguageProvider } from './src/contexts/LanguageContext';
 import { getDatabase } from './src/database';
 import { useBabyStore } from './src/store/babyStore';
 import { BabyService } from './src/services/babyService';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
+// Health screens
+import { AddTemperatureScreen } from './src/screens/AddTemperatureScreen';
+import { AddVaccineScreen } from './src/screens/AddVaccineScreen';
+import { AddMilestoneScreen } from './src/screens/AddMilestoneScreen';
+import { AddMedicationScreen } from './src/screens/AddMedicationScreen';
+import { AddMedicalVisitScreen } from './src/screens/AddMedicalVisitScreen';
+import { VaccineListScreen } from './src/screens/VaccineListScreen';
+import { MilestoneTimelineScreen } from './src/screens/MilestoneTimelineScreen';
+import { MedicationListScreen } from './src/screens/MedicationListScreen';
+import { MedicalVisitListScreen } from './src/screens/MedicalVisitListScreen';
+import { TemperatureListScreen } from './src/screens/TemperatureListScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -95,8 +103,6 @@ export default function App() {
   }
   
   return (
-    <ThemeProvider>
-      <LanguageProvider>
         <NavigationContainer>
           <Stack.Navigator
             screenOptions={{
@@ -233,16 +239,8 @@ export default function App() {
           }}
         />
         <Stack.Screen
-          name="ThemeSettings"
-          component={ThemeSettingsScreen}
-          options={{
-            headerShown: false,
-            presentation: 'card',
-          }}
-        />
-        <Stack.Screen
-          name="LanguageSettings"
-          component={LanguageSettingsScreen}
+          name="FontSizeSettings"
+          component={FontSizeSettingsScreen}
           options={{
             headerShown: false,
             presentation: 'card',
@@ -256,11 +254,90 @@ export default function App() {
             presentation: 'card',
           }}
         />
+        {/* Health & Milestone screens */}
+        <Stack.Screen
+          name="AddTemperature"
+          component={AddTemperatureScreen}
+          options={{
+            headerShown: false,
+            presentation: 'modal',
+          }}
+        />
+        <Stack.Screen
+          name="AddVaccine"
+          component={AddVaccineScreen}
+          options={{
+            headerShown: false,
+            presentation: 'modal',
+          }}
+        />
+        <Stack.Screen
+          name="AddMilestone"
+          component={AddMilestoneScreen}
+          options={{
+            headerShown: false,
+            presentation: 'modal',
+          }}
+        />
+        <Stack.Screen
+          name="AddMedication"
+          component={AddMedicationScreen}
+          options={{
+            headerShown: false,
+            presentation: 'modal',
+          }}
+        />
+        <Stack.Screen
+          name="AddMedicalVisit"
+          component={AddMedicalVisitScreen}
+          options={{
+            headerShown: false,
+            presentation: 'modal',
+          }}
+        />
+        <Stack.Screen
+          name="VaccineList"
+          component={VaccineListScreen}
+          options={{
+            headerShown: false,
+            presentation: 'card',
+          }}
+        />
+        <Stack.Screen
+          name="MilestoneTimeline"
+          component={MilestoneTimelineScreen}
+          options={{
+            headerShown: false,
+            presentation: 'card',
+          }}
+        />
+        <Stack.Screen
+          name="MedicationList"
+          component={MedicationListScreen}
+          options={{
+            headerShown: false,
+            presentation: 'card',
+          }}
+        />
+        <Stack.Screen
+          name="MedicalVisitList"
+          component={MedicalVisitListScreen}
+          options={{
+            headerShown: false,
+            presentation: 'card',
+          }}
+        />
+        <Stack.Screen
+          name="TemperatureList"
+          component={TemperatureListScreen}
+          options={{
+            headerShown: false,
+            presentation: 'card',
+          }}
+        />
       </Stack.Navigator>
       <StatusBar style="auto" />
     </NavigationContainer>
-      </LanguageProvider>
-    </ThemeProvider>
   );
 }
 

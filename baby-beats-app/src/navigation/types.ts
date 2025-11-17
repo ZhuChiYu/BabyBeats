@@ -8,6 +8,7 @@ export type TabParamList = {
   Log: undefined;
   Stats: undefined;
   Growth: undefined;
+  Health: undefined;
   Settings: undefined;
 };
 
@@ -19,9 +20,35 @@ export type RootStackParamList = {
   AddSleep: undefined;
   AddDiaper: undefined;
   AddPumping: undefined;
+  AddGrowth: undefined;
   BabyManagement: undefined;
   AddBaby: undefined;
   EditBaby: { babyId: string };
+  EditFeeding: { feedingId: string };
+  EditSleep: { sleepId: string };
+  EditDiaper: { diaperId: string };
+  EditPumping: { pumpingId: string };
+  
+  // 健康相关
+  TemperatureList: undefined;
+  AddTemperature: undefined;
+  EditTemperature: { temperatureId: string };
+  
+  VaccineList: undefined;
+  AddVaccine: undefined;
+  EditVaccine: { vaccineId: string };
+  
+  MilestoneTimeline: undefined;
+  AddMilestone: undefined;
+  EditMilestone: { milestoneId: string };
+  
+  MedicalVisitList: undefined;
+  AddMedicalVisit: undefined;
+  EditMedicalVisit: { visitId: string };
+  
+  MedicationList: undefined;
+  AddMedication: { visitId?: string };
+  EditMedication: { medicationId: string };
 };
 
 // 导航prop类型
