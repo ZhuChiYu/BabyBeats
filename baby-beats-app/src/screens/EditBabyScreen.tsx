@@ -59,7 +59,7 @@ export const EditBabyScreen: React.FC<EditBabyScreenProps> = ({ navigation }) =>
 
     setSaving(true);
     try {
-      await BabyService.update(currentBaby.id, {
+      const updates = {
         name: name.trim(),
         gender,
         birthday: birthday.getTime(),
@@ -67,16 +67,21 @@ export const EditBabyScreen: React.FC<EditBabyScreenProps> = ({ navigation }) =>
         birthHeight: birthHeight ? parseFloat(birthHeight) : undefined,
         birthHeadCirc: birthHeadCirc ? parseFloat(birthHeadCirc) : undefined,
         bloodType: bloodType || undefined,
-      });
+      };
 
-      // 更新本地状态
-      const updatedBaby = await BabyService.getById(currentBaby.id);
-      if (updatedBaby) {
-        updateBaby(updatedBaby);
-      }
+      // 更新数据库
+      await BabyService.update(currentBaby.id, updates);
 
-      // 关闭页面
-      navigation.goBack();
+      // 更新 Store 中的状态
+      updateBaby(currentBaby.id, updates);
+
+      // 显示成功提示并关闭页面
+      Alert.alert('成功', '宝宝信息已更新', [
+        {
+          text: '确定',
+          onPress: () => navigation.goBack(),
+        },
+      ]);
     } catch (error) {
       console.error('Failed to update baby:', error);
       Alert.alert('错误', '更新失败，请重试');
