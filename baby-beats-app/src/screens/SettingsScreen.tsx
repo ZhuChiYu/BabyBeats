@@ -19,8 +19,6 @@ import { PumpingService } from '../services/pumpingService';
 import { GrowthService } from '../services/growthService';
 import { exportAllData } from '../utils/exportUtils';
 import { Colors, APP_CONFIG } from '../constants';
-import { useTheme } from '../contexts/ThemeContext';
-import { useLanguage } from '../contexts/LanguageContext';
 import { DataService } from '../services/dataService';
 
 interface SettingsScreenProps {
@@ -30,8 +28,6 @@ interface SettingsScreenProps {
 export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) => {
   const { getCurrentBaby, babies } = useBabyStore();
   const currentBaby = getCurrentBaby();
-  const { theme, themeMode, isDarkMode } = useTheme();
-  const { language } = useLanguage();
   
   const [exporting, setExporting] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
@@ -44,7 +40,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
     
     Alert.alert(
       '导出数据',
-      `确定要导出 ${currentBaby.name} 的所有数据吗？`,
+      `确定要导出 ${currentBaby.name} 的所有数据吗？\n\n包括：喂养、睡眠、尿布、挤奶、成长、体温、疫苗、里程碑、用药和就医记录`,
       [
         { text: '取消', style: 'cancel' },
         {
@@ -52,13 +48,36 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
           onPress: async () => {
             setExporting(true);
             try {
+              // 动态导入新服务
+              const { TemperatureService } = await import('../services/temperatureService');
+              const { VaccineService } = await import('../services/vaccineService');
+              const { MilestoneService } = await import('../services/milestoneService');
+              const { MedicationService } = await import('../services/medicationService');
+              const { MedicalVisitService } = await import('../services/medicalVisitService');
+              
               // 获取所有数据
-              const [feedings, sleeps, diapers, pumpings, growthRecords] = await Promise.all([
+              const [
+                feedings,
+                sleeps,
+                diapers,
+                pumpings,
+                growthRecords,
+                temperatures,
+                vaccines,
+                milestones,
+                medications,
+                medicalVisits,
+              ] = await Promise.all([
                 FeedingService.getByBabyId(currentBaby.id),
                 SleepService.getByBabyId(currentBaby.id),
                 DiaperService.getByBabyId(currentBaby.id),
                 PumpingService.getByBabyId(currentBaby.id),
                 GrowthService.getByBabyId(currentBaby.id),
+                TemperatureService.getByBabyId(currentBaby.id),
+                VaccineService.getByBabyId(currentBaby.id),
+                MilestoneService.getByBabyId(currentBaby.id),
+                MedicationService.getByBabyId(currentBaby.id),
+                MedicalVisitService.getByBabyId(currentBaby.id),
               ]);
               
               await exportAllData(
@@ -69,6 +88,11 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
                   diapers,
                   pumpings,
                   growthRecords,
+                  temperatures,
+                  vaccines,
+                  milestones,
+                  medications,
+                  medicalVisits,
                 },
                 format
               );
@@ -308,16 +332,10 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
               />
             )}
             {renderSettingItem(
-              'moon-outline',
-              '深色模式',
-              themeMode === 'light' ? '浅色' : themeMode === 'dark' ? '深色' : '跟随系统',
-              () => navigation.navigate('ThemeSettings')
-            )}
-            {renderSettingItem(
-              'language-outline',
-              '语言设置',
-              language === 'zh' ? '中文简体' : 'English',
-              () => navigation.navigate('LanguageSettings')
+              'text-outline',
+              '文字大小',
+              '标准',
+              () => navigation.navigate('FontSizeSettings')
             )}
           </>
         )}
@@ -388,7 +406,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
           <Text style={styles.footerText}>
             {APP_CONFIG.name} v{APP_CONFIG.version}
           </Text>
-          <Text style={styles.footerText}>Made with ❤️ for parents</Text>
+          <Text style={styles.footerText}>Made with ❤️ for Zhu Jin Xi</Text>
         </View>
       </ScrollView>
     </SafeAreaView>
