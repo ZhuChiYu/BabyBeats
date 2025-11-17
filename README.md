@@ -153,8 +153,8 @@ BabyBeats/
 │   │   │   ├── LogScreen.tsx    # 记录日志
 │   │   │   ├── StatsScreen.tsx  # 统计分析
 │   │   │   ├── GrowthScreen.tsx # 成长曲线
-│   │   │   ├── HealthScreen.tsx # 健康管理（新增）
-│   │   │   ├── MilestoneTimelineScreen.tsx # 里程碑时间轴（新增）
+│   │   │   ├── HealthScreen.tsx # 健康管理
+│   │   │   ├── MilestoneTimelineScreen.tsx # 里程碑时间轴
 │   │   │   └── SettingsScreen.tsx
 │   │   ├── navigation/          # 导航配置
 │   │   ├── services/            # 业务逻辑
@@ -165,11 +165,11 @@ BabyBeats/
 │   │   │   ├── diaperService.ts
 │   │   │   ├── pumpingService.ts
 │   │   │   ├── growthService.ts
-│   │   │   ├── temperatureService.ts    # 体温服务（新增）
-│   │   │   ├── vaccineService.ts        # 疫苗服务（新增）
-│   │   │   ├── milestoneService.ts      # 里程碑服务（新增）
-│   │   │   ├── medicationService.ts     # 用药服务（新增）
-│   │   │   ├── medicalVisitService.ts   # 就医服务（新增）
+│   │   │   ├── temperatureService.ts    # 体温服务
+│   │   │   ├── vaccineService.ts        # 疫苗服务
+│   │   │   ├── milestoneService.ts      # 里程碑服务
+│   │   │   ├── medicationService.ts     # 用药服务
+│   │   │   ├── medicalVisitService.ts   # 就医服务
 │   │   │   ├── syncManager.ts   # 同步管理
 │   │   │   └── dataService.ts
 │   │   ├── store/               # 全局状态
