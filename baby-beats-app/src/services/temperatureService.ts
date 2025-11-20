@@ -1,6 +1,5 @@
-import { getDatabase } from '../database';
+import { getDatabase, generateId, getCurrentTimestamp } from '../database';
 import { GrowthRecord } from '../types';
-import { v4 as uuidv4 } from 'react-native-uuid';
 
 export interface TemperatureRecord {
   id: string;
@@ -26,8 +25,8 @@ export class TemperatureService {
     notes?: string;
   }): Promise<TemperatureRecord> {
     const db = await getDatabase();
-    const id = uuidv4().toString();
-    const now = Date.now();
+    const id = generateId();
+    const now = getCurrentTimestamp();
 
     await db.runAsync(
       `INSERT INTO growth_records (
@@ -119,7 +118,7 @@ export class TemperatureService {
     notes?: string;
   }): Promise<void> {
     const db = await getDatabase();
-    const now = Date.now();
+    const now = getCurrentTimestamp();
 
     const updates: string[] = [];
     const values: any[] = [];

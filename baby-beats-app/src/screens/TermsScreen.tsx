@@ -91,7 +91,7 @@ export const TermsScreen: React.FC<TermsScreenProps> = ({ navigation }) => {
         </View>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>生效日期：2024年11月</Text>
+          <Text style={styles.footerText}>生效日期：2025年10月</Text>
           <Text style={styles.footerText}>BabyBeats v1.0.0</Text>
         </View>
 
