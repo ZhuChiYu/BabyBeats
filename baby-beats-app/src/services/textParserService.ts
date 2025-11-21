@@ -371,7 +371,7 @@ export class TextParserService {
   private static parseDiaperRecord(text: string, time: Date): ParsedRecord | null {
     let type: 'pee' | 'poop' | 'both' = 'poop';
     let confidence = 0.7;
-    let poopColor: 'yellow' | 'green' | 'dark' | 'other' | undefined;
+    let poopColor: 'yellow' | 'green' | 'dark' | 'black' | 'red' | 'brown' | 'white' | 'orange' | 'other' | undefined;
     let poopAmount: 'small' | 'medium' | 'large' | undefined;
     let poopConsistency: 'loose' | 'normal' | 'hard' | 'other' | undefined;
     let peeAmount: 'small' | 'medium' | 'large' | undefined;
@@ -396,37 +396,74 @@ export class TextParserService {
       const innerMatch = text.match(/里面[还]?[是]?有([^，。；！？\s]*(?:色|便|屎|💩)[^，。；！？\s]*)/);
       const searchText = innerMatch ? innerMatch[1] : text;
       
-      if (/黑色|黑便|黑屎|深黑|墨黑/.test(searchText)) {
+      // 黑色（单独分类）
+      if (/纯黑|漆黑|黑黑|全黑/.test(searchText)) {
+        poopColor = 'black';
+        confidence += 0.1;
+      } else if (/黑色|黑便|黑屎/.test(searchText)) {
+        poopColor = 'black';
+        confidence += 0.09;
+      }
+      // 深色（墨绿等深色系）
+      else if (/深黑|墨黑|深色|暗色/.test(searchText)) {
         poopColor = 'dark';
         confidence += 0.1;
-      } else if (/深色|暗色/.test(searchText)) {
-        poopColor = 'dark';
-        confidence += 0.08;
-      } else if (/绿色|绿便|青绿|墨绿/.test(searchText)) {
+      }
+      // 红色
+      else if (/红色|红便|血色|带血|鲜红/.test(searchText)) {
+        poopColor = 'red';
+        confidence += 0.1;
+      }
+      // 褐色
+      else if (/褐色|棕色|棕褐|咖啡色|深褐/.test(searchText)) {
+        poopColor = 'brown';
+        confidence += 0.1;
+      }
+      // 白色
+      else if (/白色|白便|灰白|奶白/.test(searchText)) {
+        poopColor = 'white';
+        confidence += 0.1;
+      }
+      // 橙色
+      else if (/橙色|橘色|橙黄|橘黄/.test(searchText)) {
+        poopColor = 'orange';
+        confidence += 0.1;
+      }
+      // 绿色
+      else if (/绿色|绿便|青绿|墨绿|翠绿/.test(searchText)) {
         poopColor = 'green';
         confidence += 0.1;
-      } else if (/黄色|黄便|金黄|土黄|淡黄/.test(searchText)) {
+      }
+      // 黄色
+      else if (/黄色|黄便|金黄|土黄|淡黄/.test(searchText)) {
         poopColor = 'yellow';
         confidence += 0.1;
-      } else if (/褐色|棕色|棕褐|咖啡色/.test(searchText)) {
+      }
+      // 灰色
+      else if (/灰色|灰便/.test(searchText)) {
         poopColor = 'other';
         confidence += 0.08;
-      } else if (/灰色|灰白|白色/.test(searchText)) {
-        poopColor = 'other';
-        confidence += 0.08;
-      } else if (/红色|血色|带血/.test(searchText)) {
-        poopColor = 'other';
-        confidence += 0.08;
-      } else if (/黑/.test(searchText)) {
-        // 兜底匹配：单独的"黑"字
-        poopColor = 'dark';
+      }
+      // 兜底匹配：单字
+      else if (/黑/.test(searchText)) {
+        poopColor = 'black';
+        confidence += 0.05;
+      } else if (/红/.test(searchText)) {
+        poopColor = 'red';
+        confidence += 0.05;
+      } else if (/褐|棕|咖/.test(searchText)) {
+        poopColor = 'brown';
+        confidence += 0.05;
+      } else if (/白/.test(searchText)) {
+        poopColor = 'white';
+        confidence += 0.05;
+      } else if (/橙|橘/.test(searchText)) {
+        poopColor = 'orange';
         confidence += 0.05;
       } else if (/绿/.test(searchText)) {
-        // 兜底匹配：单独的"绿"字
         poopColor = 'green';
         confidence += 0.05;
       } else if (/黄/.test(searchText)) {
-        // 兜底匹配：单独的"黄"字
         poopColor = 'yellow';
         confidence += 0.05;
       }
@@ -651,7 +688,12 @@ export class TextParserService {
     const colorMap: Record<string, string> = {
       yellow: '黄色',
       green: '绿色',
-      dark: '黑色',
+      dark: '深色',
+      black: '黑色',
+      red: '红色',
+      brown: '褐色',
+      white: '白色',
+      orange: '橙色',
       other: '其他颜色'
     };
     

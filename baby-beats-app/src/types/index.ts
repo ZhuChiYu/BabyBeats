@@ -47,7 +47,7 @@ export interface Diaper extends BaseEntity {
   time: number;
   type: 'poop' | 'pee' | 'both';
   poopConsistency?: 'loose' | 'normal' | 'hard' | 'other';
-  poopColor?: 'yellow' | 'green' | 'dark' | 'other';
+  poopColor?: 'yellow' | 'green' | 'dark' | 'black' | 'red' | 'brown' | 'white' | 'orange' | 'other';
   poopAmount?: 'small' | 'medium' | 'large';
   peeAmount?: 'small' | 'medium' | 'large';
   hasAbnormality: boolean;
