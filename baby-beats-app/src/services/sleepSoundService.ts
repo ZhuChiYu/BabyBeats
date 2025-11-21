@@ -78,6 +78,8 @@ class SleepSoundServiceClass {
         playsInSilentModeIOS: true,
         staysActiveInBackground: true,
         shouldDuckAndroid: true,
+        interruptionModeIOS: 1, // DoNotMix
+        interruptionModeAndroid: 1,
       });
     } catch (error) {
       console.error('初始化音频失败:', error);
@@ -125,6 +127,16 @@ class SleepSoundServiceClass {
     try {
       // 停止当前播放
       await this.stop();
+
+      // 确保音频模式正确设置
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        playsInSilentModeIOS: true,
+        staysActiveInBackground: true,
+        shouldDuckAndroid: true,
+        interruptionModeIOS: 1, // DoNotMix
+        interruptionModeAndroid: 1,
+      });
 
       // 创建新的Sound实例
       const { sound } = await this.createSoundFromItem(soundItem);
@@ -273,15 +285,36 @@ class SleepSoundServiceClass {
    */
   async saveRecording(uri: string, name: string): Promise<boolean> {
     try {
+      // 确保录音目录存在
+      await this.ensureRecordingsDirExists();
+
       const timestamp = Date.now();
       const fileName = `recording_${timestamp}.m4a`;
       const newUri = `${RECORDINGS_DIR}${fileName}`;
+
+      console.log('保存录音:', { from: uri, to: newUri });
+
+      // 检查源文件是否存在
+      const sourceInfo = await FileSystem.getInfoAsync(uri);
+      if (!sourceInfo.exists) {
+        console.error('源录音文件不存在:', uri);
+        return false;
+      }
 
       // 移动文件到永久存储
       await FileSystem.moveAsync({
         from: uri,
         to: newUri,
       });
+
+      // 验证文件是否成功移动
+      const destInfo = await FileSystem.getInfoAsync(newUri);
+      if (!destInfo.exists) {
+        console.error('文件移动失败');
+        return false;
+      }
+
+      console.log('录音保存成功:', newUri, '大小:', destInfo.size);
 
       // 创建声音项
       const soundItem: SoundItem = {
@@ -318,7 +351,15 @@ class SleepSoundServiceClass {
 
       // 删除文件
       if (sound.uri) {
-        await FileSystem.deleteAsync(sound.uri, { idempotent: true });
+        try {
+          const fileInfo = await FileSystem.getInfoAsync(sound.uri);
+          if (fileInfo.exists) {
+            await FileSystem.deleteAsync(sound.uri, { idempotent: true });
+          }
+        } catch (fileError) {
+          console.warn('删除文件失败，继续删除记录:', fileError);
+          // 即使文件删除失败，也继续删除记录
+        }
       }
 
       // 从列表中移除
@@ -362,6 +403,15 @@ class SleepSoundServiceClass {
       if (!soundItem.uri) {
         throw new Error('自定义声音缺少URI');
       }
+
+      // 验证文件是否存在
+      const fileInfo = await FileSystem.getInfoAsync(soundItem.uri);
+      if (!fileInfo.exists) {
+        throw new Error(`录音文件不存在: ${soundItem.uri}`);
+      }
+
+      console.log('播放自定义录音:', soundItem.uri, '大小:', fileInfo.size);
+
       return await Audio.Sound.createAsync(
         { uri: soundItem.uri },
         { shouldPlay: false, isLooping: true }
