@@ -151,13 +151,30 @@ export const SmartInputScreen: React.FC<SmartInputScreenProps> = ({ navigation }
         break;
       }
       case 'diaper': {
-        const diaperData = {
+        const diaperData: any = {
           babyId: currentBaby.id,
           time: record.data.time || record.time.getTime(),
           type: record.data.type,
           hasAbnormality: false,
           notes: record.data.notes || '',
         };
+        
+        // 添加大便相关信息
+        if (record.data.poopColor) {
+          diaperData.poopColor = record.data.poopColor;
+        }
+        if (record.data.poopAmount) {
+          diaperData.poopAmount = record.data.poopAmount;
+        }
+        if (record.data.poopConsistency) {
+          diaperData.poopConsistency = record.data.poopConsistency;
+        }
+        
+        // 添加尿量信息
+        if (record.data.peeAmount) {
+          diaperData.peeAmount = record.data.peeAmount;
+        }
+        
         await DiaperService.create(diaperData);
         break;
       }

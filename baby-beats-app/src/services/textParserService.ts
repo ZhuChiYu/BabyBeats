@@ -360,9 +360,13 @@ export class TextParserService {
   private static parseDiaperRecord(text: string, time: Date): ParsedRecord | null {
     let type: 'pee' | 'poop' | 'both' = 'poop';
     let confidence = 0.7;
+    let poopColor: 'yellow' | 'green' | 'dark' | 'other' | undefined;
+    let poopAmount: 'small' | 'medium' | 'large' | undefined;
+    let poopConsistency: 'loose' | 'normal' | 'hard' | 'other' | undefined;
+    let peeAmount: 'small' | 'medium' | 'large' | undefined;
 
     // 判断类型
-    if (/拉|大便|便便|屎/.test(text)) {
+    if (/拉|大便|便便|屎|💩/.test(text)) {
       if (/尿/.test(text)) {
         type = 'both';
         confidence = 0.9;
@@ -375,11 +379,90 @@ export class TextParserService {
       confidence = 0.9;
     }
 
-    // 提取备注
-    let notes = '';
-    if (/量[不很]?多/.test(text)) {
-      notes = text.match(/量[不很]?多/)?.[0] || '';
+    // 提取大便颜色
+    if (type === 'poop' || type === 'both') {
+      if (/黑色|黑便|墨绿|深色|黑/.test(text)) {
+        poopColor = 'dark';
+        confidence += 0.1;
+      } else if (/绿色|绿便|绿/.test(text)) {
+        poopColor = 'green';
+        confidence += 0.1;
+      } else if (/黄色|黄便|金黄|黄/.test(text)) {
+        poopColor = 'yellow';
+        confidence += 0.1;
+      } else if (/褐色|棕色|灰色/.test(text)) {
+        poopColor = 'other';
+        confidence += 0.05;
+      }
+
+      // 提取大便量级
+      if (/一大坨|很多|大量|超多|好多/.test(text)) {
+        poopAmount = 'large';
+        confidence += 0.1;
+      } else if (/一点点|很少|少量|一丢丢/.test(text)) {
+        poopAmount = 'small';
+        confidence += 0.1;
+      } else if (/量[不很]?多|正常|适中/.test(text)) {
+        poopAmount = 'medium';
+        confidence += 0.05;
+      }
+
+      // 提取大便稠度
+      if (/稀|水样|拉稀|腹泻/.test(text)) {
+        poopConsistency = 'loose';
+        confidence += 0.1;
+      } else if (/硬|干|干硬|便秘/.test(text)) {
+        poopConsistency = 'hard';
+        confidence += 0.1;
+      } else if (/正常|成型|软/.test(text)) {
+        poopConsistency = 'normal';
+        confidence += 0.05;
+      } else if (/糊状|粘稠/.test(text)) {
+        poopConsistency = 'other';
+        confidence += 0.05;
+      }
     }
+
+    // 提取尿量
+    if (type === 'pee' || type === 'both') {
+      if (/尿.*很多|尿.*大量|尿.*超多/.test(text)) {
+        peeAmount = 'large';
+        confidence += 0.05;
+      } else if (/尿.*一点|尿.*很少|尿.*少量/.test(text)) {
+        peeAmount = 'small';
+        confidence += 0.05;
+      } else if (/尿.*正常|尿.*适中/.test(text)) {
+        peeAmount = 'medium';
+        confidence += 0.05;
+      }
+    }
+
+    // 构建详细备注
+    const notesArr: string[] = [];
+    
+    // 添加原文中的关键描述
+    if (poopColor === 'dark') notesArr.push('黑色便便');
+    else if (poopColor === 'green') notesArr.push('绿色便便');
+    else if (poopColor === 'yellow') notesArr.push('黄色便便');
+    
+    if (poopAmount === 'large') notesArr.push('量大');
+    else if (poopAmount === 'small') notesArr.push('量少');
+    
+    if (poopConsistency === 'loose') notesArr.push('偏稀');
+    else if (poopConsistency === 'hard') notesArr.push('偏硬');
+    
+    // 提取其他描述性词汇
+    const descMatches = text.match(/里面还?[有是].*?(?=[，。；！？\s]|$)/g);
+    if (descMatches) {
+      descMatches.forEach(match => {
+        const cleaned = match.replace(/^里面还?[有是]/, '').trim();
+        if (cleaned && cleaned.length < 20) {
+          notesArr.push(cleaned);
+        }
+      });
+    }
+
+    const notes = notesArr.join('，');
 
     return {
       id: `diaper_${Date.now()}_${Math.random()}`,
@@ -388,9 +471,13 @@ export class TextParserService {
       data: {
         time: time.getTime(),
         type,
+        poopColor,
+        poopAmount,
+        poopConsistency,
+        peeAmount,
         notes
       },
-      confidence,
+      confidence: Math.min(confidence, 1),
       originalText: text
     };
   }
@@ -522,8 +609,47 @@ export class TextParserService {
       poop: '便',
       both: '尿+便'
     };
+    
+    const colorMap: Record<string, string> = {
+      yellow: '黄色',
+      green: '绿色',
+      dark: '黑色',
+      other: '其他颜色'
+    };
+    
+    const amountMap: Record<string, string> = {
+      small: '量少',
+      medium: '量中',
+      large: '量大'
+    };
+    
+    const consistencyMap: Record<string, string> = {
+      loose: '偏稀',
+      normal: '正常',
+      hard: '偏硬',
+      other: '其他'
+    };
 
     let result = `${timeStr} - ${typeMap[data.type]}`;
+    
+    // 添加大便详细信息
+    if (data.type !== 'pee') {
+      const details: string[] = [];
+      if (data.poopColor) details.push(colorMap[data.poopColor]);
+      if (data.poopAmount) details.push(amountMap[data.poopAmount]);
+      if (data.poopConsistency) details.push(consistencyMap[data.poopConsistency]);
+      
+      if (details.length > 0) {
+        result += ` [${details.join('、')}]`;
+      }
+    }
+    
+    // 添加尿量信息
+    if (data.type !== 'poop' && data.peeAmount) {
+      result += ` [尿量${amountMap[data.peeAmount]}]`;
+    }
+    
+    // 添加备注
     if (data.notes) {
       result += ` (${data.notes})`;
     }
