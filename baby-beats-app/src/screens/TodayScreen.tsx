@@ -321,6 +321,23 @@ export const TodayScreen: React.FC<TodayScreenProps> = ({ navigation }) => {
           />
         }
       >
+        {/* 智能输入快捷入口 */}
+        <TouchableOpacity
+          style={styles.smartInputCard}
+          onPress={() => navigation.navigate('SmartInput')}
+        >
+          <View style={styles.smartInputLeft}>
+            <View style={styles.smartInputIcon}>
+              <Ionicons name="sparkles" size={24} color="#FF9500" />
+            </View>
+            <View>
+              <Text style={styles.smartInputTitle}>智能输入</Text>
+              <Text style={styles.smartInputDesc}>用文字描述，AI智能识别</Text>
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#C7C7CC" />
+        </TouchableOpacity>
+
         {/* 实时计时卡片 */}
         <LiveTimerCard />
         
@@ -772,6 +789,48 @@ const styles = StyleSheet.create({
   },
   visitDepartment: {
     fontSize: 13,
+    color: '#8E8E93',
+  },
+  smartInputCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    marginHorizontal: 16,
+    marginBottom: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: '#FFE5A3',
+    backgroundColor: '#FFFBF0',
+  },
+  smartInputLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  smartInputIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#FFF9E6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  smartInputTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000000',
+    marginBottom: 2,
+  },
+  smartInputDesc: {
+    fontSize: 12,
     color: '#8E8E93',
   },
   footer: {

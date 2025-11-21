@@ -36,6 +36,7 @@ import { MilestoneTimelineScreen } from './src/screens/MilestoneTimelineScreen';
 import { MedicationListScreen } from './src/screens/MedicationListScreen';
 import { MedicalVisitListScreen } from './src/screens/MedicalVisitListScreen';
 import { TemperatureListScreen } from './src/screens/TemperatureListScreen';
+import { SmartInputScreen } from './src/screens/SmartInputScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -193,6 +194,14 @@ export default function App() {
         <Stack.Screen
           name="AddBaby"
           component={AddBabyScreen}
+          options={{
+            headerShown: false,
+            presentation: 'modal',
+          }}
+        />
+        <Stack.Screen
+          name="SmartInput"
+          component={SmartInputScreen}
           options={{
             headerShown: false,
             presentation: 'modal',
