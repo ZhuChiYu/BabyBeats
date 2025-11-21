@@ -70,7 +70,7 @@ export const initializeDatabase = async (db: SQLite.SQLiteDatabase) => {
       time INTEGER NOT NULL,
       type TEXT NOT NULL CHECK(type IN ('poop', 'pee', 'both')),
       poop_consistency TEXT CHECK(poop_consistency IN ('loose', 'normal', 'hard', 'other')),
-      poop_color TEXT CHECK(poop_color IN ('yellow', 'green', 'dark', 'other')),
+      poop_color TEXT CHECK(poop_color IN ('yellow', 'green', 'dark', 'black', 'red', 'brown', 'white', 'orange', 'other')),
       poop_amount TEXT CHECK(poop_amount IN ('small', 'medium', 'large')),
       pee_amount TEXT CHECK(pee_amount IN ('small', 'medium', 'large')),
       has_abnormality INTEGER DEFAULT 0,
