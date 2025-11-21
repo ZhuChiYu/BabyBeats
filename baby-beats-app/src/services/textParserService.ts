@@ -43,24 +43,29 @@ export class TextParserService {
   private static extractRecordsFromSentence(sentence: string): ParsedRecord[] {
     const records: ParsedRecord[] = [];
     
+    // 先预处理：将"拉了一次"、"吃了一次"等表达中的"一次"替换，避免被误识别为"一点"
+    let processedSentence = sentence
+      .replace(/([拉尿吃喂])了?一次/g, '$1了')
+      .replace(/([拉尿吃喂])一次/g, '$1了');
+    
     // 按时间词分割句子
-    const timePattern = /(?:昨晚|今早|昨天|今天|凌晨)?\s*(?:十点|一点|两点|三点|四点|五点|六点|七点|八点|九点|十一点|十二点|\d{1,2}点|\d{1,2}:\d{2})[左右半多]?/g;
+    const timePattern = /(?:昨晚|今早|昨天|今天|凌晨)?\s*(?:十一点|十二点|十点|一点|两点|三点|四点|五点|六点|七点|八点|九点|\d{1,2}点|\d{1,2}:\d{2})[左右半多]?/g;
     
     let lastIndex = 0;
     let match;
     const segments: Array<{ time: string; text: string }> = [];
 
-    while ((match = timePattern.exec(sentence)) !== null) {
+    while ((match = timePattern.exec(processedSentence)) !== null) {
       if (match.index > lastIndex) {
         // 如果前面有内容但没有时间，可能是前一个时间的延续
         if (segments.length > 0) {
-          segments[segments.length - 1].text += sentence.substring(lastIndex, match.index);
+          segments[segments.length - 1].text += processedSentence.substring(lastIndex, match.index);
         }
       }
       
       segments.push({
         time: match[0],
-        text: sentence.substring(match.index + match[0].length)
+        text: processedSentence.substring(match.index + match[0].length)
       });
       
       lastIndex = match.index + match[0].length;
@@ -68,33 +73,64 @@ export class TextParserService {
 
     // 如果没有找到时间词，整句作为一个片段，使用当前时间
     if (segments.length === 0) {
-      segments.push({ time: '', text: sentence });
+      segments.push({ time: '', text: processedSentence });
     }
 
     // 解析每个片段
     for (const segment of segments) {
       const time = this.parseTime(segment.time);
-      const type = this.detectRecordType(segment.text);
       
-      if (type === 'feeding') {
+      // 检查是否包含复合动作（如"吃完...睡觉"）
+      const hasFeeding = /吃|喂|奶|母乳|奶粉/.test(segment.text);
+      const hasSleep = /睡|觉/.test(segment.text);
+      const hasDiaper = /拉|尿|便|屎/.test(segment.text);
+      
+      // 处理"吃完...睡觉"这种复合场景
+      if (hasFeeding && hasSleep) {
+        // 先添加喂养记录
         const feedingRecord = this.parseFeedingRecord(segment.text, time);
         if (feedingRecord) {
           records.push(feedingRecord);
         }
-      } else if (type === 'sleep') {
+        // 再添加睡眠记录（使用同样的开始时间）
         const sleepRecord = this.parseSleepRecord(segment.text, time);
         if (sleepRecord) {
           records.push(sleepRecord);
         }
-      } else if (type === 'diaper') {
+      } else if (hasFeeding && hasDiaper) {
+        // 处理喂养和尿布同时出现的情况
+        const feedingRecord = this.parseFeedingRecord(segment.text, time);
+        if (feedingRecord) {
+          records.push(feedingRecord);
+        }
         const diaperRecord = this.parseDiaperRecord(segment.text, time);
         if (diaperRecord) {
           records.push(diaperRecord);
         }
-      } else if (type === 'pumping') {
-        const pumpingRecord = this.parsePumpingRecord(segment.text, time);
-        if (pumpingRecord) {
-          records.push(pumpingRecord);
+      } else {
+        // 单一类型的记录
+        const type = this.detectRecordType(segment.text);
+        
+        if (type === 'feeding') {
+          const feedingRecord = this.parseFeedingRecord(segment.text, time);
+          if (feedingRecord) {
+            records.push(feedingRecord);
+          }
+        } else if (type === 'sleep') {
+          const sleepRecord = this.parseSleepRecord(segment.text, time);
+          if (sleepRecord) {
+            records.push(sleepRecord);
+          }
+        } else if (type === 'diaper') {
+          const diaperRecord = this.parseDiaperRecord(segment.text, time);
+          if (diaperRecord) {
+            records.push(diaperRecord);
+          }
+        } else if (type === 'pumping') {
+          const pumpingRecord = this.parsePumpingRecord(segment.text, time);
+          if (pumpingRecord) {
+            records.push(pumpingRecord);
+          }
         }
       }
     }
@@ -139,38 +175,42 @@ export class TextParserService {
     // 处理相对日期
     if (timeStr.includes('昨晚') || timeStr.includes('昨天')) {
       targetDate.setDate(targetDate.getDate() - 1);
-    } else if (timeStr.includes('今早') || timeStr.includes('今天')) {
-      // 保持今天
     }
 
     // 处理具体时间
     let hour = now.getHours();
     let minute = 0;
+    let timeFound = false;
 
     // 匹配 HH:MM 格式
     const timeMatch = timeStr.match(/(\d{1,2}):(\d{2})/);
     if (timeMatch) {
       hour = parseInt(timeMatch[1]);
       minute = parseInt(timeMatch[2]);
+      timeFound = true;
     } else {
-      // 匹配中文时间
+      // 匹配中文时间 - 注意顺序，长的先匹配
       const hourMap: Record<string, number> = {
+        '十一点': 11, '十二点': 12, '十点': 10,
         '一点': 1, '两点': 2, '三点': 3, '四点': 4, '五点': 5,
-        '六点': 6, '七点': 7, '八点': 8, '九点': 9, '十点': 10,
-        '十一点': 11, '十二点': 12
+        '六点': 6, '七点': 7, '八点': 8, '九点': 9
       };
 
       for (const [key, value] of Object.entries(hourMap)) {
         if (timeStr.includes(key)) {
           hour = value;
+          timeFound = true;
           break;
         }
       }
 
-      // 匹配数字点
-      const digitMatch = timeStr.match(/(\d{1,2})点/);
-      if (digitMatch) {
-        hour = parseInt(digitMatch[1]);
+      // 如果中文没匹配到，再匹配数字点
+      if (!timeFound) {
+        const digitMatch = timeStr.match(/(\d{1,2})点/);
+        if (digitMatch) {
+          hour = parseInt(digitMatch[1]);
+          timeFound = true;
+        }
       }
 
       // 处理半点
@@ -180,11 +220,25 @@ export class TextParserService {
     }
 
     // 特殊时间处理
-    if (timeStr.includes('昨晚') || timeStr.includes('晚')) {
-      if (hour < 12) hour += 12; // 转为24小时制
+    // 如果明确说了"昨晚"或句子中有"晚"字，且小时数小于12，则转为晚上
+    if ((timeStr.includes('昨晚') || timeStr.includes('晚上')) && hour < 12 && hour !== 0) {
+      hour += 12; // 转为24小时制
     }
+    // 凌晨时间保持在0-6点范围
     if (timeStr.includes('凌晨') && hour >= 12) {
       hour -= 12;
+    }
+    
+    // 如果没有特殊标记，使用智能判断
+    if (!timeStr.includes('昨晚') && !timeStr.includes('昨天') && 
+        !timeStr.includes('今早') && !timeStr.includes('今天') && 
+        !timeStr.includes('凌晨') && !timeStr.includes('晚')) {
+      // 默认使用当前时间的上下文
+      // 如果是很小的时间（1-6点）且现在是白天，可能是今天凌晨或明天凌晨
+      const currentHour = now.getHours();
+      if (hour >= 1 && hour <= 6 && currentHour >= 7) {
+        // 可能是今天凌晨，保持不变
+      }
     }
 
     targetDate.setHours(hour, minute, 0, 0);
