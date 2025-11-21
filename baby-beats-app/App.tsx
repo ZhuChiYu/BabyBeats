@@ -37,6 +37,7 @@ import { MedicationListScreen } from './src/screens/MedicationListScreen';
 import { MedicalVisitListScreen } from './src/screens/MedicalVisitListScreen';
 import { TemperatureListScreen } from './src/screens/TemperatureListScreen';
 import { SmartInputScreen } from './src/screens/SmartInputScreen';
+import { SleepSoundScreen } from './src/screens/SleepSoundScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -205,6 +206,14 @@ export default function App() {
           options={{
             headerShown: false,
             presentation: 'modal',
+          }}
+        />
+        <Stack.Screen
+          name="SleepSound"
+          component={SleepSoundScreen}
+          options={{
+            headerShown: false,
+            presentation: 'card',
           }}
         />
         <Stack.Screen

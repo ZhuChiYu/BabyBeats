@@ -338,6 +338,23 @@ export const TodayScreen: React.FC<TodayScreenProps> = ({ navigation }) => {
           <Ionicons name="chevron-forward" size={20} color="#C7C7CC" />
         </TouchableOpacity>
 
+        {/* 哄睡白噪音入口 */}
+        <TouchableOpacity
+          style={styles.sleepSoundCard}
+          onPress={() => navigation.navigate('SleepSound')}
+        >
+          <View style={styles.sleepSoundLeft}>
+            <View style={styles.sleepSoundIcon}>
+              <Ionicons name="moon" size={24} color="#5856D6" />
+            </View>
+            <View>
+              <Text style={styles.sleepSoundTitle}>哄睡白噪音</Text>
+              <Text style={styles.sleepSoundDesc}>轻柔白噪音，助宝宝安然入睡</Text>
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#C7C7CC" />
+        </TouchableOpacity>
+
         {/* 实时计时卡片 */}
         <LiveTimerCard />
         
@@ -792,7 +809,6 @@ const styles = StyleSheet.create({
     color: '#8E8E93',
   },
   smartInputCard: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 16,
     marginHorizontal: 16,
@@ -830,6 +846,47 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   smartInputDesc: {
+    fontSize: 12,
+    color: '#8E8E93',
+  },
+  sleepSoundCard: {
+    borderRadius: 16,
+    padding: 16,
+    marginHorizontal: 16,
+    marginBottom: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: '#DDD9FA',
+    backgroundColor: '#F7F6FE',
+  },
+  sleepSoundLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  sleepSoundIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#EEEDFC',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  sleepSoundTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000',
+    marginBottom: 2,
+  },
+  sleepSoundDesc: {
     fontSize: 12,
     color: '#8E8E93',
   },
