@@ -7,7 +7,7 @@ import {View,
   TouchableOpacity,
   ScrollView,
   Alert,
-  Switch,,
+  Switch,
   KeyboardAvoidingView,
   Platform
 } from 'react-native';

@@ -63,7 +63,12 @@ export const MedicalVisitListScreen: React.FC<{ navigation: any }> = ({ navigati
           </View>
         ) : (
           visits.map((visit) => (
-            <View key={visit.id} style={styles.card}>
+            <TouchableOpacity
+              key={visit.id}
+              style={styles.card}
+              onPress={() => navigation.navigate('AddMedicalVisit', { medicalVisit: visit })}
+              activeOpacity={0.7}
+            >
               <View style={styles.cardHeader}>
                 <Ionicons name="medical" size={24} color="#5856D6" />
                 <View style={styles.cardTitleContainer}>
@@ -72,11 +77,12 @@ export const MedicalVisitListScreen: React.FC<{ navigation: any }> = ({ navigati
                     {format(new Date(visit.visitTime), 'yyyy-MM-dd HH:mm')}
                   </Text>
                 </View>
+                <Ionicons name="chevron-forward" size={20} color="#C7C7CC" />
               </View>
               {visit.department && <Text style={styles.cardDetail}>科室: {visit.department}</Text>}
               {visit.symptoms && <Text style={styles.cardDetail}>症状: {visit.symptoms}</Text>}
               {visit.diagnosis && <Text style={styles.cardDetail}>诊断: {visit.diagnosis}</Text>}
-            </View>
+            </TouchableOpacity>
           ))
         )}
       </ScrollView>

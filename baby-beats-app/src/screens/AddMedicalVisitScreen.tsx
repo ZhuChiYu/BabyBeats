@@ -20,23 +20,27 @@ import { zhCN } from 'date-fns/locale';
 
 interface AddMedicalVisitScreenProps {
   navigation: any;
+  route?: any;
 }
 
-export const AddMedicalVisitScreen: React.FC<AddMedicalVisitScreenProps> = ({ navigation }) => {
+export const AddMedicalVisitScreen: React.FC<AddMedicalVisitScreenProps> = ({ navigation, route }) => {
   const { getCurrentBaby } = useBabyStore();
   const currentBaby = getCurrentBaby();
+  
+  const editingVisit = route?.params?.medicalVisit;
+  const isEditing = !!editingVisit;
 
-  const [visitTime, setVisitTime] = useState(new Date());
+  const [visitTime, setVisitTime] = useState(editingVisit ? new Date(editingVisit.visitTime) : new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [hospital, setHospital] = useState('');
-  const [department, setDepartment] = useState('');
+  const [hospital, setHospital] = useState(editingVisit?.hospital || '');
+  const [department, setDepartment] = useState(editingVisit?.department || '');
   const [showDepartmentPicker, setShowDepartmentPicker] = useState(false);
-  const [doctorName, setDoctorName] = useState('');
-  const [symptoms, setSymptoms] = useState('');
+  const [doctorName, setDoctorName] = useState(editingVisit?.doctorName || '');
+  const [symptoms, setSymptoms] = useState(editingVisit?.symptoms || '');
   const [showSymptomsPicker, setShowSymptomsPicker] = useState(false);
-  const [diagnosis, setDiagnosis] = useState('');
-  const [doctorAdvice, setDoctorAdvice] = useState('');
-  const [notes, setNotes] = useState('');
+  const [diagnosis, setDiagnosis] = useState(editingVisit?.diagnosis || '');
+  const [doctorAdvice, setDoctorAdvice] = useState(editingVisit?.doctorAdvice || '');
+  const [notes, setNotes] = useState(editingVisit?.notes || '');
   const [saving, setSaving] = useState(false);
 
   const commonDepartments = MedicalVisitService.getCommonDepartments();
@@ -55,19 +59,32 @@ export const AddMedicalVisitScreen: React.FC<AddMedicalVisitScreenProps> = ({ na
 
     setSaving(true);
     try {
-      await MedicalVisitService.create({
-        babyId: currentBaby.id,
-        visitTime: visitTime.getTime(),
-        hospital: hospital.trim() || undefined,
-        department: department.trim() || undefined,
-        doctorName: doctorName.trim() || undefined,
-        symptoms: symptoms.trim() || undefined,
-        diagnosis: diagnosis.trim() || undefined,
-        doctorAdvice: doctorAdvice.trim() || undefined,
-        notes: notes.trim() || undefined,
-      });
+      if (isEditing) {
+        await MedicalVisitService.update(editingVisit.id, {
+          visitTime: visitTime.getTime(),
+          hospital: hospital.trim() || undefined,
+          department: department.trim() || undefined,
+          doctorName: doctorName.trim() || undefined,
+          symptoms: symptoms.trim() || undefined,
+          diagnosis: diagnosis.trim() || undefined,
+          doctorAdvice: doctorAdvice.trim() || undefined,
+          notes: notes.trim() || undefined,
+        });
+      } else {
+        await MedicalVisitService.create({
+          babyId: currentBaby.id,
+          visitTime: visitTime.getTime(),
+          hospital: hospital.trim() || undefined,
+          department: department.trim() || undefined,
+          doctorName: doctorName.trim() || undefined,
+          symptoms: symptoms.trim() || undefined,
+          diagnosis: diagnosis.trim() || undefined,
+          doctorAdvice: doctorAdvice.trim() || undefined,
+          notes: notes.trim() || undefined,
+        });
+      }
 
-      Alert.alert('成功', '就诊记录已保存', [
+      Alert.alert('成功', isEditing ? '就诊记录已更新' : '就诊记录已保存', [
         {
           text: '确定',
           onPress: () => navigation.goBack(),
@@ -81,10 +98,38 @@ export const AddMedicalVisitScreen: React.FC<AddMedicalVisitScreenProps> = ({ na
     }
   };
 
+  const handleDelete = () => {
+    Alert.alert(
+      '确认删除',
+      '确定要删除这条就诊记录吗？',
+      [
+        { text: '取消', style: 'cancel' },
+        {
+          text: '删除',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await MedicalVisitService.delete(editingVisit.id);
+              Alert.alert('成功', '就诊记录已删除', [
+                {
+                  text: '确定',
+                  onPress: () => navigation.goBack(),
+                },
+              ]);
+            } catch (error) {
+              console.error('Failed to delete medical visit:', error);
+              Alert.alert('错误', '删除失败，请重试');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ModalHeader
-        title="记录就诊"
+        title={isEditing ? "编辑就诊记录" : "记录就诊"}
         onCancel={() => navigation.goBack()}
         onSave={handleSave}
         saving={saving}
@@ -274,6 +319,15 @@ export const AddMedicalVisitScreen: React.FC<AddMedicalVisitScreenProps> = ({ na
           />
         </View>
 
+        {isEditing && (
+          <View style={styles.deleteButtonContainer}>
+            <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
+              <Ionicons name="trash-outline" size={20} color="#FF3B30" />
+              <Text style={styles.deleteButtonText}>删除此记录</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         <View style={styles.footer} />
       </ScrollView>
 
@@ -409,6 +463,26 @@ const styles = StyleSheet.create({
   },
   footer: {
     height: 32,
+  },
+  deleteButtonContainer: {
+    padding: 16,
+    backgroundColor: '#FFFFFF',
+  },
+  deleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    backgroundColor: '#FFF5F5',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#FFE5E5',
+  },
+  deleteButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FF3B30',
+    marginLeft: 8,
   },
 });
 
