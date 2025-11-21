@@ -9,6 +9,9 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Keyboard,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants';
@@ -28,7 +31,7 @@ export const SmartInputScreen: React.FC<SmartInputScreenProps> = ({ navigation }
   const [parsedRecords, setParsedRecords] = useState<ParsedRecord[]>([]);
   const [parsing, setParsing] = useState(false);
   const [saving, setSaving] = useState(false);
-  const currentBaby = useBabyStore((state) => state.currentBaby);
+  const currentBaby = useBabyStore((state) => state.getCurrentBaby());
 
   const handleParse = () => {
     if (!inputText.trim()) {
@@ -108,18 +111,73 @@ export const SmartInputScreen: React.FC<SmartInputScreenProps> = ({ navigation }
     if (!currentBaby) return;
 
     switch (record.type) {
-      case 'feeding':
-        await FeedingService.create(currentBaby.id, record.data);
+      case 'feeding': {
+        // 转换喂养数据格式
+        const feedingData: any = {
+          babyId: currentBaby.id,
+          time: record.data.startTime || record.time.getTime(),
+        };
+
+        // 转换喂养类型
+        if (record.data.type === 'breast_left' || record.data.type === 'breast_right' || record.data.type === 'breast_both') {
+          feedingData.type = 'breast';
+          if (record.data.type === 'breast_left') {
+            feedingData.leftDuration = record.data.duration || 0;
+          } else if (record.data.type === 'breast_right') {
+            feedingData.rightDuration = record.data.duration || 0;
+          } else {
+            feedingData.leftDuration = Math.floor((record.data.duration || 0) / 2);
+            feedingData.rightDuration = Math.ceil((record.data.duration || 0) / 2);
+          }
+        } else if (record.data.type === 'bottle_breast') {
+          feedingData.type = 'bottled_breast_milk';
+          feedingData.milkAmount = record.data.amount || 0;
+        } else {
+          feedingData.type = 'formula';
+          feedingData.milkAmount = record.data.amount || 0;
+        }
+
+        await FeedingService.create(feedingData);
         break;
-      case 'sleep':
-        await SleepService.create(currentBaby.id, record.data);
+      }
+      case 'sleep': {
+        const sleepData = {
+          babyId: currentBaby.id,
+          startTime: record.data.startTime,
+          endTime: record.data.endTime,
+          sleepType: record.data.type || 'nap',
+        };
+        await SleepService.create(sleepData);
         break;
-      case 'diaper':
-        await DiaperService.create(currentBaby.id, record.data);
+      }
+      case 'diaper': {
+        const diaperData = {
+          babyId: currentBaby.id,
+          time: record.data.time || record.time.getTime(),
+          type: record.data.type,
+          hasAbnormality: false,
+          notes: record.data.notes || '',
+        };
+        await DiaperService.create(diaperData);
         break;
-      case 'pumping':
-        await PumpingService.create(currentBaby.id, record.data);
+      }
+      case 'pumping': {
+        const totalAmount = record.data.totalAmount || 0;
+        const method = (record.data.method === 'electric_single' || record.data.method === 'electric_double') 
+          ? 'electric' 
+          : 'manual';
+        const pumpingData = {
+          babyId: currentBaby.id,
+          time: record.data.time || record.time.getTime(),
+          method: method as 'electric' | 'manual' | 'other',
+          leftAmount: record.data.method === 'electric_double' ? Math.floor(totalAmount / 2) : 0,
+          rightAmount: record.data.method === 'electric_double' ? Math.ceil(totalAmount / 2) : 0,
+          totalAmount: totalAmount,
+          storageMethod: 'refrigerate' as const,
+        };
+        await PumpingService.create(pumpingData);
         break;
+      }
     }
   };
 
@@ -188,7 +246,16 @@ export const SmartInputScreen: React.FC<SmartInputScreenProps> = ({ navigation }
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+        keyboardVerticalOffset={0}
+      >
+        <ScrollView 
+          style={styles.content} 
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
         {/* 说明 */}
         <View style={styles.instructionCard}>
           <View style={styles.instructionHeader}>
@@ -313,6 +380,7 @@ export const SmartInputScreen: React.FC<SmartInputScreenProps> = ({ navigation }
 
         <View style={{ height: 40 }} />
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
