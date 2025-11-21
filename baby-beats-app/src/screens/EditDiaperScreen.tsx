@@ -199,10 +199,15 @@ export const EditDiaperScreen: React.FC<EditDiaperScreenProps> = ({ navigation, 
               <Text style={styles.sectionTitle}>大便颜色</Text>
               <View style={styles.optionButtons}>
                 {[
-                  { value: 'yellow', label: '黄色' },
-                  { value: 'green', label: '绿色' },
-                  { value: 'brown', label: '棕色' },
-                  { value: 'other', label: '其他' },
+                  { value: 'yellow', label: '黄色', emoji: '🟡' },
+                  { value: 'green', label: '绿色', emoji: '🟢' },
+                  { value: 'brown', label: '褐色', emoji: '🟤' },
+                  { value: 'black', label: '黑色', emoji: '⚫' },
+                  { value: 'dark', label: '深色', emoji: '🔵' },
+                  { value: 'red', label: '红色', emoji: '🔴' },
+                  { value: 'white', label: '白色', emoji: '⚪' },
+                  { value: 'orange', label: '橙色', emoji: '🟠' },
+                  { value: 'other', label: '其他', emoji: '' },
                 ].map((option) => (
                   <TouchableOpacity
                     key={option.value}
@@ -218,7 +223,7 @@ export const EditDiaperScreen: React.FC<EditDiaperScreenProps> = ({ navigation, 
                         poopColor === option.value && styles.optionButtonTextActive,
                       ]}
                     >
-                      {option.label}
+                      {option.emoji && `${option.emoji} `}{option.label}
                     </Text>
                   </TouchableOpacity>
                 ))}
