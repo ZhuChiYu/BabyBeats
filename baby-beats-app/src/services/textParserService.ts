@@ -48,8 +48,8 @@ export class TextParserService {
       .replace(/([拉尿吃喂])了?一次/g, '$1了')
       .replace(/([拉尿吃喂])一次/g, '$1了');
     
-    // 按时间词分割句子
-    const timePattern = /(?:昨晚|今早|昨天|今天|凌晨)?\s*(?:十一点|十二点|十点|一点|两点|三点|四点|五点|六点|七点|八点|九点|\d{1,2}点|\d{1,2}:\d{2})[左右半多]?/g;
+    // 按时间词分割句子 - 支持上午、下午、中午、晚上等前缀
+    const timePattern = /(?:昨晚|今早|昨天|今天|凌晨|上午|下午|中午|晚上|早上)?\s*(?:十一点|十二点|十点|一点|两点|三点|四点|五点|六点|七点|八点|九点|\d{1,2}点|\d{1,2}:\d{2})[左右半多]?/g;
     
     let lastIndex = 0;
     let match;
@@ -220,10 +220,19 @@ export class TextParserService {
     }
 
     // 特殊时间处理
-    // 如果明确说了"昨晚"或句子中有"晚"字，且小时数小于12，则转为晚上
-    if ((timeStr.includes('昨晚') || timeStr.includes('晚上')) && hour < 12 && hour !== 0) {
-      hour += 12; // 转为24小时制
+    // 下午：1-11点转为13-23点
+    if (timeStr.includes('下午') && hour >= 1 && hour <= 11) {
+      hour += 12;
     }
+    // 中午：默认12点
+    if (timeStr.includes('中午')) {
+      hour = 12;
+    }
+    // 晚上/昨晚：小于12的转为晚上
+    if ((timeStr.includes('昨晚') || timeStr.includes('晚上')) && hour < 12 && hour !== 0) {
+      hour += 12;
+    }
+    // 上午/早上：保持原样（不需要额外处理）
     // 凌晨时间保持在0-6点范围
     if (timeStr.includes('凌晨') && hour >= 12) {
       hour -= 12;
@@ -232,7 +241,9 @@ export class TextParserService {
     // 如果没有特殊标记，使用智能判断
     if (!timeStr.includes('昨晚') && !timeStr.includes('昨天') && 
         !timeStr.includes('今早') && !timeStr.includes('今天') && 
-        !timeStr.includes('凌晨') && !timeStr.includes('晚')) {
+        !timeStr.includes('凌晨') && !timeStr.includes('晚') &&
+        !timeStr.includes('上午') && !timeStr.includes('下午') && 
+        !timeStr.includes('中午') && !timeStr.includes('早上')) {
       // 默认使用当前时间的上下文
       // 如果是很小的时间（1-6点）且现在是白天，可能是今天凌晨或明天凌晨
       const currentHour = now.getHours();
@@ -379,19 +390,44 @@ export class TextParserService {
       confidence = 0.9;
     }
 
-    // 提取大便颜色
+    // 提取大便颜色 - 优先匹配更具体的描述
     if (type === 'poop' || type === 'both') {
-      if (/黑色|黑便|墨绿|深色|黑/.test(text)) {
+      // 先匹配"里面还是有/里面有"后面的描述
+      const innerMatch = text.match(/里面[还]?[是]?有([^，。；！？\s]*(?:色|便|屎|💩)[^，。；！？\s]*)/);
+      const searchText = innerMatch ? innerMatch[1] : text;
+      
+      if (/黑色|黑便|黑屎|深黑|墨黑/.test(searchText)) {
         poopColor = 'dark';
         confidence += 0.1;
-      } else if (/绿色|绿便|绿/.test(text)) {
+      } else if (/深色|暗色/.test(searchText)) {
+        poopColor = 'dark';
+        confidence += 0.08;
+      } else if (/绿色|绿便|青绿|墨绿/.test(searchText)) {
         poopColor = 'green';
         confidence += 0.1;
-      } else if (/黄色|黄便|金黄|黄/.test(text)) {
+      } else if (/黄色|黄便|金黄|土黄|淡黄/.test(searchText)) {
         poopColor = 'yellow';
         confidence += 0.1;
-      } else if (/褐色|棕色|灰色/.test(text)) {
+      } else if (/褐色|棕色|棕褐|咖啡色/.test(searchText)) {
         poopColor = 'other';
+        confidence += 0.08;
+      } else if (/灰色|灰白|白色/.test(searchText)) {
+        poopColor = 'other';
+        confidence += 0.08;
+      } else if (/红色|血色|带血/.test(searchText)) {
+        poopColor = 'other';
+        confidence += 0.08;
+      } else if (/黑/.test(searchText)) {
+        // 兜底匹配：单独的"黑"字
+        poopColor = 'dark';
+        confidence += 0.05;
+      } else if (/绿/.test(searchText)) {
+        // 兜底匹配：单独的"绿"字
+        poopColor = 'green';
+        confidence += 0.05;
+      } else if (/黄/.test(searchText)) {
+        // 兜底匹配：单独的"黄"字
+        poopColor = 'yellow';
         confidence += 0.05;
       }
 
@@ -440,26 +476,28 @@ export class TextParserService {
     // 构建详细备注
     const notesArr: string[] = [];
     
-    // 添加原文中的关键描述
-    if (poopColor === 'dark') notesArr.push('黑色便便');
-    else if (poopColor === 'green') notesArr.push('绿色便便');
-    else if (poopColor === 'yellow') notesArr.push('黄色便便');
-    
-    if (poopAmount === 'large') notesArr.push('量大');
-    else if (poopAmount === 'small') notesArr.push('量少');
-    
-    if (poopConsistency === 'loose') notesArr.push('偏稀');
-    else if (poopConsistency === 'hard') notesArr.push('偏硬');
-    
-    // 提取其他描述性词汇
-    const descMatches = text.match(/里面还?[有是].*?(?=[，。；！？\s]|$)/g);
-    if (descMatches) {
+    // 优先提取原文中的描述性语句
+    const descMatches = text.match(/里面[还]?[是]?有[^，。；！？\s]*/g);
+    if (descMatches && descMatches.length > 0) {
       descMatches.forEach(match => {
-        const cleaned = match.replace(/^里面还?[有是]/, '').trim();
-        if (cleaned && cleaned.length < 20) {
+        const cleaned = match.replace(/^里面[还]?[是]?有/, '').trim();
+        if (cleaned && cleaned.length > 0 && cleaned.length < 30) {
           notesArr.push(cleaned);
         }
       });
+    }
+    
+    // 如果没有提取到"里面..."的描述，则添加识别到的关键信息
+    if (notesArr.length === 0) {
+      if (poopColor === 'dark') notesArr.push('黑色');
+      else if (poopColor === 'green') notesArr.push('绿色');
+      else if (poopColor === 'yellow') notesArr.push('黄色');
+      
+      if (poopAmount === 'large') notesArr.push('量大');
+      else if (poopAmount === 'small') notesArr.push('量少');
+      
+      if (poopConsistency === 'loose') notesArr.push('偏稀');
+      else if (poopConsistency === 'hard') notesArr.push('偏硬');
     }
 
     const notes = notesArr.join('，');
