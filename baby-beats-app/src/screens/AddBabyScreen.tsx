@@ -7,7 +7,7 @@ import {View,
   TouchableOpacity,
   TextInput,
   Alert,
-  Platform,,
+  Platform,
   KeyboardAvoidingView
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
