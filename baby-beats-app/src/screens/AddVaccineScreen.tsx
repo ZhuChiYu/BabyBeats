@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import {
-  View,
+import {View,
   Text,
   StyleSheet,
   SafeAreaView,
@@ -8,7 +7,9 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
-  Switch,
+  Switch,,
+  KeyboardAvoidingView,
+  Platform
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useBabyStore } from '../store/babyStore';
@@ -89,7 +90,23 @@ export const AddVaccineScreen: React.FC<AddVaccineScreenProps> = ({ navigation }
         saving={saving}
       />
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <KeyboardAvoidingView 
+
+
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+
+
+        style={{ flex: 1 }}
+
+
+        keyboardVerticalOffset={0}
+
+
+      >
+
+
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled">
         {/* 疫苗名称 */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>疫苗名称 *</Text>
@@ -241,6 +258,9 @@ export const AddVaccineScreen: React.FC<AddVaccineScreenProps> = ({ navigation }
 
         <View style={styles.footer} />
       </ScrollView>
+
+
+      </KeyboardAvoidingView>
 
       {showDatePicker && (
         <DateTimePicker

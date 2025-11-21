@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  View,
+import {View,
   Text,
   StyleSheet,
   SafeAreaView,
@@ -9,6 +8,8 @@ import {
   TextInput,
   Alert,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
@@ -138,7 +139,23 @@ export const EditFeedingScreen: React.FC<EditFeedingScreenProps> = ({ navigation
         saving={saving}
       />
       
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <KeyboardAvoidingView 
+
+      
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+
+      
+        style={{ flex: 1 }}
+
+      
+        keyboardVerticalOffset={0}
+
+      
+      >
+
+      
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled">
         {/* 喂养类型 */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>喂养类型</Text>
@@ -269,6 +286,9 @@ export const EditFeedingScreen: React.FC<EditFeedingScreenProps> = ({ navigation
         
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };

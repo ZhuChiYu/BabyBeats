@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import {
-  View,
+import {View,
   Text,
   StyleSheet,
   SafeAreaView,
   TextInput,
   TouchableOpacity,
   ScrollView,
-  Alert,
+  Alert,,
+  KeyboardAvoidingView,
+  Platform
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useBabyStore } from '../store/babyStore';
@@ -170,7 +171,23 @@ export const AddMedicationScreen: React.FC<AddMedicationScreenProps> = ({ naviga
         saving={saving}
       />
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <KeyboardAvoidingView 
+
+
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+
+
+        style={{ flex: 1 }}
+
+
+        keyboardVerticalOffset={0}
+
+
+      >
+
+
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled">
         {/* 药品名称 */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>药品名称 *</Text>
@@ -337,6 +354,9 @@ export const AddMedicationScreen: React.FC<AddMedicationScreenProps> = ({ naviga
 
         <View style={styles.footer} />
       </ScrollView>
+
+
+      </KeyboardAvoidingView>
 
       {showDatePicker && (
         <DateTimePicker

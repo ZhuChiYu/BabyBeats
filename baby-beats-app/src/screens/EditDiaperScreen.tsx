@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  View,
+import {View,
   Text,
   StyleSheet,
   SafeAreaView,
@@ -9,7 +8,9 @@ import {
   TextInput,
   Alert,
   ActivityIndicator,
-  Switch,
+  Switch,,
+  KeyboardAvoidingView,
+  Platform
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { DiaperService } from '../services/diaperService';
@@ -109,7 +110,23 @@ export const EditDiaperScreen: React.FC<EditDiaperScreenProps> = ({ navigation, 
         saving={saving}
       />
       
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <KeyboardAvoidingView 
+
+      
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+
+      
+        style={{ flex: 1 }}
+
+      
+        keyboardVerticalOffset={0}
+
+      
+      >
+
+      
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled">
         {/* 类型选择 */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>尿布类型</Text>
@@ -302,6 +319,9 @@ export const EditDiaperScreen: React.FC<EditDiaperScreenProps> = ({ navigation, 
         
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  View,
+import {View,
   Text,
   StyleSheet,
   SafeAreaView,
@@ -8,7 +7,9 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
-  Image,
+  Image,,
+  KeyboardAvoidingView,
+  Platform
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useBabyStore } from '../store/babyStore';
@@ -17,7 +18,7 @@ import { ModalHeader } from '../components/ModalHeader';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
-import * as ImagePicker from 'expo-image-picker';
+// import * as ImagePicker from 'expo-image-picker'; // 暂时禁用照片功能
 import { Milestone } from '../types';
 
 interface AddMilestoneScreenProps {
@@ -55,22 +56,26 @@ export const AddMilestoneScreen: React.FC<AddMilestoneScreenProps> = ({ navigati
   const selectedType = milestoneTypes.find(t => t.id === milestoneType);
 
   const pickImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('提示', '需要相册权限才能选择照片');
-      return;
-    }
+    // 照片功能暂时禁用
+    Alert.alert('提示', '照片上传功能暂时不可用');
+    return;
+    
+    // const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    // if (status !== 'granted') {
+    //   Alert.alert('提示', '需要相册权限才能选择照片');
+    //   return;
+    // }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.8,
-    });
+    // const result = await ImagePicker.launchImageLibraryAsync({
+    //   mediaTypes: ImagePicker.MediaTypeOptions.Images,
+    //   allowsEditing: true,
+    //   aspect: [4, 3],
+    //   quality: 0.8,
+    // });
 
-    if (!result.canceled) {
-      setPhotoUri(result.assets[0].uri);
-    }
+    // if (!result.canceled) {
+    //   setPhotoUri(result.assets[0].uri);
+    // }
   };
 
   const handleDelete = async () => {
@@ -170,7 +175,23 @@ export const AddMilestoneScreen: React.FC<AddMilestoneScreenProps> = ({ navigati
         saving={saving}
       />
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <KeyboardAvoidingView 
+
+
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+
+
+        style={{ flex: 1 }}
+
+
+        keyboardVerticalOffset={0}
+
+
+      >
+
+
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled">
         {/* 类型选择 */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>里程碑类型 *</Text>
@@ -320,6 +341,9 @@ export const AddMilestoneScreen: React.FC<AddMilestoneScreenProps> = ({ navigati
 
         <View style={styles.footer} />
       </ScrollView>
+
+
+      </KeyboardAvoidingView>
 
       {showDatePicker && (
         <DateTimePicker

@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import {
-  View,
+import {View,
   Text,
   StyleSheet,
   SafeAreaView,
@@ -9,7 +8,8 @@ import {
   TextInput,
   Alert,
   ActivityIndicator,
-  Platform,
+  Platform,,
+  KeyboardAvoidingView
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
@@ -140,7 +140,23 @@ export const AddGrowthScreen: React.FC<AddGrowthScreenProps> = ({ navigation, ro
         saving={saving}
       />
       
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <KeyboardAvoidingView 
+
+      
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+
+      
+        style={{ flex: 1 }}
+
+      
+        keyboardVerticalOffset={0}
+
+      
+      >
+
+      
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled">
         {/* 测量日期 */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>测量日期</Text>
@@ -246,6 +262,9 @@ export const AddGrowthScreen: React.FC<AddGrowthScreenProps> = ({ navigation, ro
 
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };

@@ -499,7 +499,67 @@ npx expo build:ios
 npx expo build:android
 ```
 
-详细部署文档请参考：[DEPLOYMENT.md](./DEPLOYMENT.md)
+### 📚 完整部署文档
+
+BabyBeats 提供了详细的生产环境部署指南，帮助您从开发到上线：
+
+#### 🎯 快速部署
+- **[快速部署指南](./QUICK_DEPLOYMENT_GUIDE.md)** - 30 分钟快速上线
+- **[部署总览](./DEPLOYMENT_OVERVIEW.md)** - 完整流程和时间线规划
+- **[部署检查清单](./DEPLOYMENT_CHECKLIST.md)** - 逐项检查确保不遗漏
+
+#### 📱 iOS 发布
+- **[iOS 发布完整指南](./IOS_DEPLOYMENT_GUIDE.md)** - 包含：
+  - Apple 开发者账号申请流程
+  - Expo EAS 配置和使用
+  - TestFlight 内测完整指南（邀请码生成和分发）
+  - App Store 审核准备和正式发布
+  - 版本更新流程
+
+#### 🖥️ 后端部署
+- **[后端部署完整指南](./BACKEND_DEPLOYMENT_GUIDE.md)** - 包含：
+  - 服务器选购详细对比（阿里云/腾讯云/DigitalOcean/AWS）
+  - 服务器初始化和安全配置
+  - Docker 一键部署方案
+  - 域名和 SSL 证书配置
+  - 数据库管理和备份策略
+  - 监控、日志和性能优化
+
+#### 🛠️ 自动化脚本
+项目提供了开箱即用的部署脚本：
+
+```bash
+# 后端一键部署
+cd backend
+chmod +x deploy.sh
+./deploy.sh production
+
+# iOS 自动构建和发布
+cd baby-beats-app
+chmod +x deploy-ios.sh
+./deploy-ios.sh production
+
+# 服务器初始化（首次使用）
+wget https://raw.githubusercontent.com/yourusername/BabyBeats/main/backend/setup-server.sh
+sudo bash setup-server.sh
+```
+
+#### 💰 成本估算
+- **Apple 开发者账号**: $99/年 (约 ¥700)
+- **服务器**: ¥200-400/月（初创阶段）
+- **域名**: ¥55/年
+- **SSL 证书**: 免费（Let's Encrypt）
+- **首年总计**: 约 ¥3,155 起
+
+#### ⏱️ 时间线
+- **最快发布**: 2-3 周
+- **稳妥发布**: 5-8 周（含充分测试）
+
+#### 🎓 推荐阅读顺序
+1. **[部署总览](./DEPLOYMENT_OVERVIEW.md)** - 了解全局流程
+2. **[后端部署指南](./BACKEND_DEPLOYMENT_GUIDE.md)** - 部署后端服务
+3. **[iOS 发布指南](./IOS_DEPLOYMENT_GUIDE.md)** - 发布 iOS 应用
+4. **[部署检查清单](./DEPLOYMENT_CHECKLIST.md)** - 逐项确认
 
 ## 🧪 测试
 

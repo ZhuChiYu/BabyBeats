@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
-import {
-  View,
+import {View,
   Text,
   StyleSheet,
   SafeAreaView,
   TextInput,
   TouchableOpacity,
   ScrollView,
-  Alert,
+  Alert,,
+  KeyboardAvoidingView,
+  Platform
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useBabyStore } from '../store/babyStore';
@@ -89,7 +90,23 @@ export const AddMedicalVisitScreen: React.FC<AddMedicalVisitScreenProps> = ({ na
         saving={saving}
       />
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <KeyboardAvoidingView 
+
+
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+
+
+        style={{ flex: 1 }}
+
+
+        keyboardVerticalOffset={0}
+
+
+      >
+
+
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled">
         {/* 就诊时间 */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>就诊时间 *</Text>
@@ -259,6 +276,9 @@ export const AddMedicalVisitScreen: React.FC<AddMedicalVisitScreenProps> = ({ na
 
         <View style={styles.footer} />
       </ScrollView>
+
+
+      </KeyboardAvoidingView>
 
       {showDatePicker && (
         <DateTimePicker

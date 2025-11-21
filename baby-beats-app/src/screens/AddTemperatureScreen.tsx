@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
-import {
-  View,
+import {View,
   Text,
   StyleSheet,
   SafeAreaView,
   TextInput,
   TouchableOpacity,
   ScrollView,
-  Alert,
+  Alert,,
+  KeyboardAvoidingView,
+  Platform
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useBabyStore } from '../store/babyStore';
@@ -92,7 +93,23 @@ export const AddTemperatureScreen: React.FC<AddTemperatureScreenProps> = ({ navi
         saving={saving}
       />
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <KeyboardAvoidingView 
+
+
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+
+
+        style={{ flex: 1 }}
+
+
+        keyboardVerticalOffset={0}
+
+
+      >
+
+
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled">
         {/* 体温输入 */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>体温值 (°C)</Text>
@@ -181,6 +198,9 @@ export const AddTemperatureScreen: React.FC<AddTemperatureScreenProps> = ({ navi
 
         <View style={styles.footer} />
       </ScrollView>
+
+
+      </KeyboardAvoidingView>
 
       {showDatePicker && (
         <DateTimePicker

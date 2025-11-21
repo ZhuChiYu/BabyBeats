@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import {
-  View,
+import {View,
   Text,
   StyleSheet,
   SafeAreaView,
@@ -8,7 +7,8 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
-  Platform,
+  Platform,,
+  KeyboardAvoidingView
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
@@ -78,7 +78,23 @@ export const AddBabyScreen: React.FC<AddBabyScreenProps> = ({ navigation }) => {
         saving={saving}
       />
       
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <KeyboardAvoidingView 
+
+      
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+
+      
+        style={{ flex: 1 }}
+
+      
+        keyboardVerticalOffset={0}
+
+      
+      >
+
+      
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled">
         {/* 宝宝姓名 */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>宝宝姓名 *</Text>
@@ -222,6 +238,9 @@ export const AddBabyScreen: React.FC<AddBabyScreenProps> = ({ navigation }) => {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };

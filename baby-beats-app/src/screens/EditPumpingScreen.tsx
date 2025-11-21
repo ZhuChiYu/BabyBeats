@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  View,
+import {View,
   Text,
   StyleSheet,
   SafeAreaView,
@@ -9,6 +8,8 @@ import {
   TextInput,
   Alert,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { PumpingService } from '../services/pumpingService';
@@ -115,7 +116,23 @@ export const EditPumpingScreen: React.FC<EditPumpingScreenProps> = ({ navigation
         saving={saving}
       />
       
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <KeyboardAvoidingView 
+
+      
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+
+      
+        style={{ flex: 1 }}
+
+      
+        keyboardVerticalOffset={0}
+
+      
+      >
+
+      
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled">
         {/* 挤奶方式 */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>挤奶方式</Text>
@@ -240,6 +257,9 @@ export const EditPumpingScreen: React.FC<EditPumpingScreenProps> = ({ navigation
         
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };

@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
-import {
-  View,
+import {View,
   Text,
   StyleSheet,
   SafeAreaView,
   ScrollView,
   TouchableOpacity,
   TextInput,
-  Alert,
+  Alert,,
+  KeyboardAvoidingView,
+  Platform
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useBabyStore } from '../store/babyStore';
@@ -95,7 +96,23 @@ export const AddPumpingScreen: React.FC<AddPumpingScreenProps> = ({ navigation }
         saving={saving}
       />
       
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <KeyboardAvoidingView 
+
+      
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+
+      
+        style={{ flex: 1 }}
+
+      
+        keyboardVerticalOffset={0}
+
+      
+      >
+
+      
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled">
         {/* 挤奶方式 */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>挤奶方式</Text>
@@ -257,6 +274,9 @@ export const AddPumpingScreen: React.FC<AddPumpingScreenProps> = ({ navigation }
         
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };

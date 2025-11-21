@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import {
-  View,
+import {View,
   Text,
   StyleSheet,
   SafeAreaView,
@@ -8,7 +7,8 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
-  Platform,
+  Platform,,
+  KeyboardAvoidingView
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useBabyStore } from '../store/babyStore';
@@ -106,7 +106,23 @@ export const AddSleepScreen: React.FC<AddSleepScreenProps> = ({ navigation }) =>
         saving={saving}
       />
       
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <KeyboardAvoidingView 
+
+      
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+
+      
+        style={{ flex: 1 }}
+
+      
+        keyboardVerticalOffset={0}
+
+      
+      >
+
+      
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled">
         {/* 睡眠类型 */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>睡眠类型</Text>
@@ -221,6 +237,9 @@ export const AddSleepScreen: React.FC<AddSleepScreenProps> = ({ navigation }) =>
         
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
