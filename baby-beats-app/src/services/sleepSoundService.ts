@@ -79,9 +79,9 @@ class SleepSoundServiceClass {
         allowsRecordingIOS: false,
         playsInSilentModeIOS: true,
         staysActiveInBackground: true,
-        shouldDuckAndroid: true,
-        interruptionModeIOS: 1, // DoNotMix
-        interruptionModeAndroid: 1,
+        shouldDuckAndroid: false, // 不降低音量
+        interruptionModeIOS: 1, // DO_NOT_MIX
+        interruptionModeAndroid: 1, // DO_NOT_MIX
       });
     } catch (error) {
       console.error('初始化音频失败:', error);
@@ -130,14 +130,14 @@ class SleepSoundServiceClass {
       // 停止当前播放
       await this.stop();
 
-      // 确保音频模式正确设置
+      // 确保音频模式正确设置（支持后台播放）
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: false,
         playsInSilentModeIOS: true,
         staysActiveInBackground: true,
-        shouldDuckAndroid: true,
-        interruptionModeIOS: 1, // DoNotMix
-        interruptionModeAndroid: 1,
+        shouldDuckAndroid: false,
+        interruptionModeIOS: 1, // DO_NOT_MIX
+        interruptionModeAndroid: 1, // DO_NOT_MIX
       });
 
       // 创建新的Sound实例
