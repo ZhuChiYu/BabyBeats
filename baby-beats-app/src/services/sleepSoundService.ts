@@ -19,6 +19,8 @@ class SleepSoundServiceClass {
   private sound: Sound | null = null;
   private recording: Audio.Recording | null = null;
   private isLooping: boolean = true;
+  private currentSoundItem: SoundItem | null = null;
+  private currentlyPlaying: boolean = false;
 
   // 内置白噪音列表
   private builtInSounds: SoundItem[] = [
@@ -147,8 +149,14 @@ class SleepSoundServiceClass {
 
       // 开始播放
       await this.sound.playAsync();
+      
+      // 更新状态
+      this.currentSoundItem = soundItem;
+      this.currentlyPlaying = true;
     } catch (error) {
       console.error('播放失败:', error);
+      this.currentSoundItem = null;
+      this.currentlyPlaying = false;
       throw error;
     }
   }
@@ -159,6 +167,7 @@ class SleepSoundServiceClass {
   async pause(): Promise<void> {
     if (this.sound) {
       await this.sound.pauseAsync();
+      this.currentlyPlaying = false;
     }
   }
 
@@ -168,6 +177,7 @@ class SleepSoundServiceClass {
   async resume(): Promise<void> {
     if (this.sound) {
       await this.sound.playAsync();
+      this.currentlyPlaying = true;
     }
   }
 
@@ -183,6 +193,8 @@ class SleepSoundServiceClass {
         console.error('停止播放失败:', error);
       } finally {
         this.sound = null;
+        this.currentSoundItem = null;
+        this.currentlyPlaying = false;
       }
     }
   }
@@ -195,6 +207,30 @@ class SleepSoundServiceClass {
     if (this.sound) {
       this.sound.setIsLoopingAsync(isLooping);
     }
+  }
+
+  /**
+   * 获取当前播放状态
+   */
+  getPlaybackState(): { soundItem: SoundItem | null; isPlaying: boolean } {
+    return {
+      soundItem: this.currentSoundItem,
+      isPlaying: this.currentlyPlaying,
+    };
+  }
+
+  /**
+   * 检查是否正在播放
+   */
+  isCurrentlyPlaying(): boolean {
+    return this.currentlyPlaying;
+  }
+
+  /**
+   * 获取当前播放的声音
+   */
+  getCurrentSound(): SoundItem | null {
+    return this.currentSoundItem;
   }
 
   /**

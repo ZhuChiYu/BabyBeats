@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import * as FileSystem from 'expo-file-system';
+import { useFocusEffect } from '@react-navigation/native';
 import { SleepSoundService, SoundItem } from '../services/sleepSoundService';
 
 interface SleepSoundScreenProps {
@@ -35,6 +36,17 @@ export const SleepSoundScreen: React.FC<SleepSoundScreenProps> = ({ navigation }
     // 不在组件卸载时停止播放，支持后台播放
     // 音频只有在点击停止按钮时才会停止
   }, []);
+
+  // 每次页面获得焦点时，恢复播放状态
+  useFocusEffect(
+    useCallback(() => {
+      const playbackState = SleepSoundService.getPlaybackState();
+      if (playbackState.soundItem) {
+        setCurrentSound(playbackState.soundItem);
+        setIsPlaying(playbackState.isPlaying);
+      }
+    }, [])
+  );
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
