@@ -32,10 +32,8 @@ export const SleepSoundScreen: React.FC<SleepSoundScreenProps> = ({ navigation }
     loadCustomSounds();
     requestPermissions();
 
-    return () => {
-      // 清理：组件卸载时停止播放
-      SleepSoundService.stop();
-    };
+    // 不在组件卸载时停止播放，支持后台播放
+    // 音频只有在点击停止按钮时才会停止
   }, []);
 
   useEffect(() => {
@@ -140,7 +138,7 @@ export const SleepSoundScreen: React.FC<SleepSoundScreenProps> = ({ navigation }
             },
             {
               text: '保存',
-              onPress: async (name) => {
+              onPress: async (name?: string) => {
                 if (name && name.trim()) {
                   const success = await SleepSoundService.saveRecording(uri, name.trim());
                   if (success) {
@@ -394,7 +392,6 @@ export const SleepSoundScreen: React.FC<SleepSoundScreenProps> = ({ navigation }
                     styles.recordingBar,
                     {
                       height: 20 + Math.random() * 40,
-                      animationDelay: `${i * 0.1}s`,
                     },
                   ]}
                 />
