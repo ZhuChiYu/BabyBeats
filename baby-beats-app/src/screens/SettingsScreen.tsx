@@ -9,6 +9,8 @@ import {
   Alert,
   Switch,
   ActivityIndicator,
+  Modal,
+  Pressable,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useBabyStore } from '../store/babyStore';
@@ -18,6 +20,7 @@ import { DiaperService } from '../services/diaperService';
 import { PumpingService } from '../services/pumpingService';
 import { GrowthService } from '../services/growthService';
 import { exportAllData } from '../utils/exportUtils';
+import { importFromJSON, showImportStats } from '../utils/importUtils';
 import { Colors, APP_CONFIG } from '../constants';
 import { DataService } from '../services/dataService';
 
@@ -30,22 +33,27 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
   const currentBaby = getCurrentBaby();
   
   const [exporting, setExporting] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  
+  const handleShowExportModal = () => {
+    if (!currentBaby) {
+      Alert.alert('提示', '请先选择一个宝宝');
+      return;
+    }
+    setShowExportModal(true);
+  };
   
   const handleExportData = async (format: 'csv' | 'json') => {
+    setShowExportModal(false);
+    
     if (!currentBaby) {
       Alert.alert('提示', '请先选择一个宝宝');
       return;
     }
     
-    Alert.alert(
-      '导出数据',
-      `确定要导出 ${currentBaby.name} 的所有数据吗？\n\n包括：喂养、睡眠、尿布、挤奶、成长、体温、疫苗、里程碑、用药和就医记录`,
-      [
-        { text: '取消', style: 'cancel' },
-        {
-          text: '确定',
-          onPress: async () => {
             setExporting(true);
             try {
               // 动态导入新服务
@@ -103,6 +111,48 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
               Alert.alert('错误', '导出失败，请重试');
             } finally {
               setExporting(false);
+    }
+  };
+
+  const handleShowImportModal = () => {
+    if (!currentBaby) {
+      Alert.alert('提示', '请先选择一个宝宝');
+      return;
+    }
+    setShowImportModal(true);
+  };
+
+  const handleImportData = async () => {
+    setShowImportModal(false);
+    
+    if (!currentBaby) {
+      Alert.alert('提示', '请先选择一个宝宝');
+      return;
+    }
+    
+    Alert.alert(
+      '导入数据',
+      `即将导入数据到 ${currentBaby.name} 的记录中\n\n⚠️ 导入的数据将添加到现有记录中，不会覆盖现有数据`,
+      [
+        { text: '取消', style: 'cancel' },
+        {
+          text: '继续导入',
+          onPress: async () => {
+            setImporting(true);
+            try {
+              const result = await importFromJSON(currentBaby.id);
+              
+              if (result.success) {
+                const statsMessage = result.stats ? `\n\n${showImportStats(result.stats)}` : '';
+                Alert.alert('成功', result.message + statsMessage);
+              } else {
+                Alert.alert('导入失败', result.message);
+              }
+            } catch (error) {
+              console.error('Import error:', error);
+              Alert.alert('错误', '导入失败，请重试');
+            } finally {
+              setImporting(false);
             }
           },
         },
@@ -295,17 +345,17 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
             )}
             {renderSettingItem(
               'download-outline',
-              '导出数据 (JSON)',
-              '导出所有记录为JSON格式',
-              () => handleExportData('json'),
+              '导出数据',
+              '导出所有记录（JSON/CSV）',
+              handleShowExportModal,
               exporting ? <ActivityIndicator size="small" color={Colors.primary} /> : null
             )}
             {renderSettingItem(
-              'document-text-outline',
-              '导出数据 (CSV)',
-              '导出所有记录为CSV格式',
-              () => handleExportData('csv'),
-              exporting ? <ActivityIndicator size="small" color={Colors.primary} /> : null
+              'cloud-upload-outline',
+              '导入数据',
+              '从文件导入记录',
+              handleShowImportModal,
+              importing ? <ActivityIndicator size="small" color={Colors.primary} /> : null
             )}
             {renderSettingItem(
               'cloud-outline',
@@ -409,6 +459,118 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
           <Text style={styles.footerText}>Made with ❤️ for Zhu Jin Xi</Text>
         </View>
       </ScrollView>
+
+      {/* 导出格式选择弹窗 */}
+      <Modal
+        visible={showExportModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowExportModal(false)}
+      >
+        <Pressable 
+          style={styles.modalOverlay}
+          onPress={() => setShowExportModal(false)}
+        >
+          <View style={styles.modalContent} onStartShouldSetResponder={() => true}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>选择导出格式</Text>
+              <TouchableOpacity 
+                onPress={() => setShowExportModal(false)}
+                style={styles.modalCloseButton}
+              >
+                <Ionicons name="close" size={24} color="#8E8E93" />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.modalBody}>
+              <TouchableOpacity
+                style={styles.formatOption}
+                onPress={() => handleExportData('json')}
+              >
+                <View style={styles.formatIconContainer}>
+                  <Ionicons name="code-outline" size={32} color={Colors.primary} />
+                </View>
+                <View style={styles.formatInfo}>
+                  <Text style={styles.formatTitle}>JSON 格式</Text>
+                  <Text style={styles.formatDescription}>
+                    包含所有数据的完整备份，适合导入到其他设备
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color="#C7C7CC" />
+              </TouchableOpacity>
+
+              <View style={styles.formatDivider} />
+
+              <TouchableOpacity
+                style={styles.formatOption}
+                onPress={() => handleExportData('csv')}
+              >
+                <View style={styles.formatIconContainer}>
+                  <Ionicons name="document-text-outline" size={32} color={Colors.primary} />
+                </View>
+                <View style={styles.formatInfo}>
+                  <Text style={styles.formatTitle}>CSV 格式</Text>
+                  <Text style={styles.formatDescription}>
+                    表格数据，可在Excel中打开，按类型分别导出
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color="#C7C7CC" />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Pressable>
+      </Modal>
+
+      {/* 导入说明弹窗 */}
+      <Modal
+        visible={showImportModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowImportModal(false)}
+      >
+        <Pressable 
+          style={styles.modalOverlay}
+          onPress={() => setShowImportModal(false)}
+        >
+          <View style={styles.modalContent} onStartShouldSetResponder={() => true}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>导入数据</Text>
+              <TouchableOpacity 
+                onPress={() => setShowImportModal(false)}
+                style={styles.modalCloseButton}
+              >
+                <Ionicons name="close" size={24} color="#8E8E93" />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.modalBody}>
+              <View style={styles.importInfo}>
+                <Ionicons name="information-circle" size={48} color={Colors.primary} />
+                <Text style={styles.importTitle}>支持的格式</Text>
+                <Text style={styles.importDescription}>
+                  仅支持导入 JSON 格式的文件{'\n'}
+                  （由本应用导出的数据文件）
+                </Text>
+                
+                <View style={styles.importWarning}>
+                  <Ionicons name="warning-outline" size={20} color="#FF9500" />
+                  <Text style={styles.importWarningText}>
+                    导入的数据将添加到当前宝宝的记录中，不会覆盖现有数据
+                  </Text>
+                </View>
+              </View>
+
+              <TouchableOpacity
+                style={styles.importButton}
+                onPress={handleImportData}
+              >
+                <Ionicons name="cloud-upload-outline" size={20} color="#FFFFFF" />
+                <Text style={styles.importButtonText}>选择文件并导入</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -535,5 +697,129 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#C7C7CC',
     marginBottom: 4,
+  },
+  // Modal 样式
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    width: '100%',
+    maxWidth: 400,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F5F5F7',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#000',
+  },
+  modalCloseButton: {
+    padding: 4,
+  },
+  modalBody: {
+    padding: 20,
+  },
+  // 导出格式选项
+  formatOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+  },
+  formatIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: `${Colors.primary}15`,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  formatInfo: {
+    flex: 1,
+  },
+  formatTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#000',
+    marginBottom: 4,
+  },
+  formatDescription: {
+    fontSize: 14,
+    color: '#8E8E93',
+    lineHeight: 20,
+  },
+  formatDivider: {
+    height: 1,
+    backgroundColor: '#F5F5F7',
+    marginVertical: 8,
+  },
+  // 导入样式
+  importInfo: {
+    alignItems: 'center',
+    paddingVertical: 16,
+  },
+  importTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#000',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  importDescription: {
+    fontSize: 14,
+    color: '#8E8E93',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  importWarning: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF9E6',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    marginTop: 8,
+  },
+  importWarningText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#FF9500',
+    marginLeft: 8,
+    lineHeight: 18,
+  },
+  importButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.primary,
+    paddingVertical: 16,
+    borderRadius: 12,
+    marginTop: 20,
+  },
+  importButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginLeft: 8,
   },
 });

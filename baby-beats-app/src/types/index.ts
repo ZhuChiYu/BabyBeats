@@ -139,6 +139,15 @@ export interface Vaccine extends BaseEntity {
   notes?: string;
 }
 
+// 体温记录
+export interface Temperature extends BaseEntity {
+  babyId: string;
+  date: number;
+  temperature: number;
+  measurementMethod?: 'forehead' | 'ear' | 'armpit' | 'rectal' | 'oral';
+  notes?: string;
+}
+
 // 统计数据类型
 export interface DailySummary {
   date: number;
