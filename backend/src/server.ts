@@ -11,6 +11,10 @@ import authRoutes from './routes/authRoutes';
 import babyRoutes from './routes/babyRoutes';
 import syncRoutes from './routes/syncRoutes';
 import feedingRoutes from './routes/feedingRoutes';
+import diaperRoutes from './routes/diaperRoutes';
+import sleepRoutes from './routes/sleepRoutes';
+import pumpingRoutes from './routes/pumpingRoutes';
+import growthRoutes from './routes/growthRoutes';
 
 const app = express();
 
@@ -61,6 +65,10 @@ app.use(`${apiVersion}/auth`, authRoutes);
 app.use(`${apiVersion}/babies`, babyRoutes);
 app.use(`${apiVersion}/sync`, syncRoutes);
 app.use(`${apiVersion}/feedings`, feedingRoutes);
+app.use(`${apiVersion}/diapers`, diaperRoutes);
+app.use(`${apiVersion}/sleeps`, sleepRoutes);
+app.use(`${apiVersion}/pumpings`, pumpingRoutes);
+app.use(`${apiVersion}/growth`, growthRoutes);
 
 // 添加路由调试日志
 console.log('📍 Registered routes:');
@@ -68,6 +76,10 @@ console.log(`  - ${apiVersion}/auth`);
 console.log(`  - ${apiVersion}/babies`);
 console.log(`  - ${apiVersion}/sync`);
 console.log(`  - ${apiVersion}/feedings`);
+console.log(`  - ${apiVersion}/diapers`);
+console.log(`  - ${apiVersion}/sleeps`);
+console.log(`  - ${apiVersion}/pumpings`);
+console.log(`  - ${apiVersion}/growth`);
 
 // 404 处理
 app.use(notFound);
