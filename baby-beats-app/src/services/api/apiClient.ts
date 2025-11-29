@@ -13,37 +13,30 @@ import { Platform } from 'react-native';
 
 // 根据平台和运行环境选择正确的 API URL
 const getApiUrl = () => {
-  // 生产环境 - 使用腾讯云服务器
+  // 生产环境 - 使用腾讯云服务器 + 域名
   if (!__DEV__) {
-    // 方式1: 使用域名（推荐，需要配置 Nginx）
-    return 'https://englishpartner.cn/api/v1';
+    // 生产环境使用 HTTPS 域名（推荐）
+    return 'https://englishpartner.cn/babybeats/api/v1';
     
-    // 方式2: 直接使用 IP 和端口
-    // return 'http://111.230.110.95:3000/api/v1';
+    // 备用：直接使用 IP（如果域名未配置）
+    // return 'http://111.230.110.95:4100/api/v1';
   }
 
   // 开发环境
-  // ⚠️ 重要提示：
-  // - Docker 容器在 macOS 上运行时，iOS 模拟器无法通过 localhost 访问
-  // - 必须使用局域网 IP 地址（如 192.168.x.x）
-  // - Android 模拟器可以使用 10.0.2.2 访问主机的 localhost
+  // 选项1: 使用生产服务器进行开发测试（推荐，无需本地启动后端）
+  return 'https://englishpartner.cn/babybeats/api/v1';
   
-  // 开发环境可以选择：
-  // 1. 本地开发服务器
-  // 2. 腾讯云测试服务器
-  
-  // 使用本地开发服务器
+  // 选项2: 使用本地开发服务器（取消下面注释）
+  /*
   if (Platform.OS === 'android') {
     // Android 模拟器使用特殊 IP 10.0.2.2 访问主机
     return 'http://10.0.2.2:3000/api/v1';
   } else {
     // iOS 模拟器 & 真机都使用局域网 IP
-    // 如果后端在 Docker 中运行，localhost 不可用
+    // 注意：需要修改为你的本机 IP 地址
     return 'http://192.168.31.221:3000/api/v1';
   }
-  
-  // 或者开发环境也使用腾讯云服务器（取消下面的注释）
-  // return 'http://111.230.110.95:3000/api/v1';
+  */
 };
 
 export const API_BASE_URL = getApiUrl();
