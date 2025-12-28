@@ -1,9 +1,18 @@
 /**
- * 百分位计算工具
- * 使用线性插值法计算宝宝测量值对应的百分位
+ * 标准差（SD）和百分位计算工具
+ * 基于 WS/T 423-2022 标准差法
+ * 
+ * 标准差与百分位的对应关系（正态分布）：
+ * -3SD ≈ P0.1
+ * -2SD ≈ P2.3  (约 P3)
+ * -1SD ≈ P15.9 (约 P16)
+ * 0SD  = P50   (中位数)
+ * +1SD ≈ P84.1 (约 P84)
+ * +2SD ≈ P97.7 (约 P97)
+ * +3SD ≈ P99.9
  */
 
-import { PercentilePoint, PercentileResult } from '../constants/growthStandards/types';
+import { SDPoint, PercentileResult } from '../constants/growthStandards/types';
 
 /**
  * 线性插值函数
@@ -14,12 +23,12 @@ function linearInterpolate(x: number, x0: number, x1: number, y0: number, y1: nu
 }
 
 /**
- * 在百分位点数组中查找相邻的两个点
+ * 在标准差点数组中查找相邻的两个点
  */
 function findAdjacentPoints(
-  points: PercentilePoint[],
+  points: SDPoint[],
   x: number
-): [PercentilePoint, PercentilePoint] | null {
+): [SDPoint, SDPoint] | null {
   if (points.length === 0) return null;
 
   // 如果 x 小于第一个点
@@ -43,12 +52,12 @@ function findAdjacentPoints(
 }
 
 /**
- * 通过插值获取某个 x 值对应的所有百分位曲线值
+ * 通过插值获取某个 x 值对应的所有标准差曲线值
  */
-export function interpolatePercentiles(
-  points: PercentilePoint[],
+export function interpolateSD(
+  points: SDPoint[],
   x: number
-): Omit<PercentilePoint, 'x'> | null {
+): Omit<SDPoint, 'x'> | null {
   const adjacent = findAdjacentPoints(points, x);
   if (!adjacent) return null;
 
@@ -57,43 +66,77 @@ export function interpolatePercentiles(
   // 如果是边界点，直接返回
   if (p0.x === p1.x) {
     return {
-      P3: p0.P3,
-      P10: p0.P10,
-      P25: p0.P25,
-      P50: p0.P50,
-      P75: p0.P75,
-      P90: p0.P90,
-      P97: p0.P97,
+      SD_neg3: p0.SD_neg3,
+      SD_neg2: p0.SD_neg2,
+      SD_neg1: p0.SD_neg1,
+      SD0: p0.SD0,
+      SD_pos1: p0.SD_pos1,
+      SD_pos2: p0.SD_pos2,
+      SD_pos3: p0.SD_pos3,
     };
   }
 
-  // 线性插值计算每条百分位曲线的值
+  // 线性插值计算每条标准差曲线的值
   return {
-    P3: linearInterpolate(x, p0.x, p1.x, p0.P3, p1.P3),
-    P10: linearInterpolate(x, p0.x, p1.x, p0.P10, p1.P10),
-    P25: linearInterpolate(x, p0.x, p1.x, p0.P25, p1.P25),
-    P50: linearInterpolate(x, p0.x, p1.x, p0.P50, p1.P50),
-    P75: linearInterpolate(x, p0.x, p1.x, p0.P75, p1.P75),
-    P90: linearInterpolate(x, p0.x, p1.x, p0.P90, p1.P90),
-    P97: linearInterpolate(x, p0.x, p1.x, p0.P97, p1.P97),
+    SD_neg3: linearInterpolate(x, p0.x, p1.x, p0.SD_neg3, p1.SD_neg3),
+    SD_neg2: linearInterpolate(x, p0.x, p1.x, p0.SD_neg2, p1.SD_neg2),
+    SD_neg1: linearInterpolate(x, p0.x, p1.x, p0.SD_neg1, p1.SD_neg1),
+    SD0: linearInterpolate(x, p0.x, p1.x, p0.SD0, p1.SD0),
+    SD_pos1: linearInterpolate(x, p0.x, p1.x, p0.SD_pos1, p1.SD_pos1),
+    SD_pos2: linearInterpolate(x, p0.x, p1.x, p0.SD_pos2, p1.SD_pos2),
+    SD_pos3: linearInterpolate(x, p0.x, p1.x, p0.SD_pos3, p1.SD_pos3),
   };
 }
 
 /**
- * 计算测量值对应的百分位
- * @param points 百分位点数组
+ * 标准正态分布的累积分布函数（CDF）近似计算
+ * 用于将 Z-score 转换为百分位
+ */
+function normalCDF(z: number): number {
+  // 使用 Zelen & Severo 近似公式
+  const t = 1 / (1 + 0.2316419 * Math.abs(z));
+  const d = 0.3989423 * Math.exp(-z * z / 2);
+  const p = d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274))));
+  
+  return z > 0 ? 1 - p : p;
+}
+
+/**
+ * 计算测量值对应的标准差分数（Z-score）
+ * @param value 测量值
+ * @param sd0 中位数（0SD）
+ * @param sdPos 正标准差值（用于计算标准差大小）
+ * @returns Z-score
+ */
+function calculateZScore(value: number, sd0: number, sdPos: number): number {
+  const sd = sdPos - sd0; // 标准差大小
+  if (sd === 0) return 0;
+  return (value - sd0) / sd;
+}
+
+/**
+ * 根据 Z-score 计算百分位
+ */
+function zScoreToPercentile(zScore: number): number {
+  const percentile = normalCDF(zScore) * 100;
+  return Math.max(0, Math.min(100, percentile));
+}
+
+/**
+ * 计算测量值对应的百分位（基于标准差法）
+ * @param points 标准差点数组
  * @param x 横轴值（月龄或身高等）
  * @param y 测量值（体重、身高等）
  * @returns 百分位计算结果
  */
 export function calculatePercentile(
-  points: PercentilePoint[],
+  points: SDPoint[],
   x: number,
   y: number
 ): PercentileResult {
-  const percentiles = interpolatePercentiles(points, x);
+  const sdValues = interpolateSD(points, x);
 
-  if (!percentiles) {
+  if (!sdValues) {
     return {
       value: y,
       percentile: 50,
@@ -102,42 +145,24 @@ export function calculatePercentile(
     };
   }
 
-  let percentile = 50;
+  // 计算 Z-score（使用 +1SD 来估算标准差）
+  const zScore = calculateZScore(y, sdValues.SD0, sdValues.SD_pos1);
+  
+  // 转换为百分位
+  const percentile = zScoreToPercentile(zScore);
+
+  // 判断状态（按 WS/T 423-2022 表2标准）
   let status: 'low' | 'normal' | 'high' | 'unknown' = 'normal';
-
-  // 判断在哪两条百分位曲线之间
-  if (y < percentiles.P3) {
-    percentile = (y / percentiles.P3) * 3;
-    status = 'low';
-  } else if (y >= percentiles.P3 && y < percentiles.P10) {
-    percentile = 3 + ((y - percentiles.P3) / (percentiles.P10 - percentiles.P3)) * 7;
-  } else if (y >= percentiles.P10 && y < percentiles.P25) {
-    percentile = 10 + ((y - percentiles.P10) / (percentiles.P25 - percentiles.P10)) * 15;
-  } else if (y >= percentiles.P25 && y < percentiles.P50) {
-    percentile = 25 + ((y - percentiles.P25) / (percentiles.P50 - percentiles.P25)) * 25;
-  } else if (y >= percentiles.P50 && y < percentiles.P75) {
-    percentile = 50 + ((y - percentiles.P50) / (percentiles.P75 - percentiles.P50)) * 25;
-  } else if (y >= percentiles.P75 && y < percentiles.P90) {
-    percentile = 75 + ((y - percentiles.P75) / (percentiles.P90 - percentiles.P75)) * 15;
-  } else if (y >= percentiles.P90 && y < percentiles.P97) {
-    percentile = 90 + ((y - percentiles.P90) / (percentiles.P97 - percentiles.P90)) * 7;
-  } else {
-    percentile = 97 + ((y - percentiles.P97) / percentiles.P97) * 3;
-    if (percentile > 100) percentile = 100;
-    status = 'high';
-  }
-
-  // 判断状态
-  if (percentile < 3) {
-    status = 'low';
-  } else if (percentile > 97) {
-    status = 'high';
-  } else {
-    status = 'normal';
+  
+  // -2SD 到 +2SD 之间为正常（约 P3-P97）
+  if (y < sdValues.SD_neg2) {
+    status = 'low';  // 低于 -2SD（约 P3）
+  } else if (y > sdValues.SD_pos2) {
+    status = 'high'; // 高于 +2SD（约 P97）
   }
 
   // 生成描述
-  const description = generateDescription(percentile, status);
+  const description = generateDescription(percentile, status, zScore);
 
   return {
     value: y,
@@ -150,20 +175,36 @@ export function calculatePercentile(
 /**
  * 生成百分位描述文字
  */
-function generateDescription(percentile: number, status: 'low' | 'normal' | 'high' | 'unknown'): string {
+function generateDescription(percentile: number, status: 'low' | 'normal' | 'high' | 'unknown', zScore: number): string {
   const p = Math.round(percentile);
+  
+  // 基于标准差的描述
+  let sdDesc = '';
+  if (zScore < -2) {
+    sdDesc = `（低于 -2SD）`;
+  } else if (zScore < -1) {
+    sdDesc = `（-2SD 至 -1SD 之间）`;
+  } else if (zScore < 0) {
+    sdDesc = `（-1SD 至中位数之间）`;
+  } else if (zScore < 1) {
+    sdDesc = `（中位数至 +1SD 之间）`;
+  } else if (zScore < 2) {
+    sdDesc = `（+1SD 至 +2SD 之间）`;
+  } else {
+    sdDesc = `（高于 +2SD）`;
+  }
 
   if (status === 'low') {
-    return `低于同龄约${100 - p}%的宝宝`;
+    return `低于同龄约${100 - p}%的宝宝 ${sdDesc}`;
   } else if (status === 'high') {
-    return `超过同龄约${p}%的宝宝`;
+    return `超过同龄约${p}%的宝宝 ${sdDesc}`;
   } else {
-    return `超过同龄约${p}%的宝宝`;
+    return `超过同龄约${p}%的宝宝 ${sdDesc}`;
   }
 }
 
 /**
- * 生成评估建议
+ * 生成评估建议（按 WS/T 423-2022 表3标准）
  */
 export function generateSuggestions(
   metric: string,
@@ -172,37 +213,69 @@ export function generateSuggestions(
 ): string[] {
   const suggestions: string[] = [];
 
-  // 低于 P3 的建议
+  // 计算 Z-score（用于判断）
+  // 注意：这里简化处理，实际应该传入 SD 值
+  const percentile = result.percentile;
+
+  // 按照 WS/T 423-2022 表3的评价方法
   if (result.status === 'low') {
-    suggestions.push('测量值偏低，建议咨询儿科医生或儿保专家');
-    suggestions.push('注意观察宝宝的饮食和生长情况');
-  }
-
-  // 高于 P97 的建议
-  if (result.status === 'high') {
-    suggestions.push('测量值偏高，建议咨询儿科医生或儿保专家');
-    if (metric === 'weight_for_age' || metric === 'bmi_for_age') {
-      suggestions.push('注意控制饮食，保持适当运动');
+    // 低于 -2SD
+    if (percentile < 3) {
+      // <-2SD，约 P3 以下
+      if (metric === 'weight_for_age') {
+        suggestions.push('体重低于正常范围（<-2SD），建议咨询儿科医生');
+        suggestions.push('注意营养摄入，评估是否存在营养不良');
+      } else if (metric === 'height_for_age') {
+        suggestions.push('身高低于正常范围（<-2SD），建议咨询儿保医生');
+        suggestions.push('可能需要评估生长激素水平');
+      } else if (metric === 'head_for_age') {
+        suggestions.push('头围低于正常范围（<-2SD），建议神经科评估');
+      }
     }
+  } else if (result.status === 'high') {
+    // 高于 +2SD
+    if (percentile > 97) {
+      if (metric === 'weight_for_age' || metric === 'bmi_for_age') {
+        suggestions.push('体重高于正常范围（>+2SD），建议咨询营养师');
+        suggestions.push('注意饮食均衡，增加运动量');
+      } else if (metric === 'height_for_age') {
+        suggestions.push('身高超过同龄儿童，属于较高水平');
+        suggestions.push('建议定期体检，关注骨龄发育');
+      }
+    }
+  } else {
+    // -2SD 到 +2SD 之间（正常范围）
+    suggestions.push('生长发育在正常范围内（-2SD~+2SD）');
+    suggestions.push('继续保持良好的饮食和作息习惯');
   }
 
-  // 跨越多条百分位曲线的建议
+  // 检查生长速度变化
   if (previousResults && previousResults.length >= 2) {
     const lastResult = previousResults[previousResults.length - 1];
     const percentileDiff = Math.abs(result.percentile - lastResult.percentile);
 
+    // 如果短期内跨越较大百分位，提示关注
     if (percentileDiff > 25) {
-      suggestions.push('生长速度变化较大，建议持续观察并咨询医生');
+      suggestions.push('⚠️ 生长速度变化较大，建议咨询医生评估');
     }
-  }
-
-  // P3-P97 之间的正常提示
-  if (result.status === 'normal' && suggestions.length === 0) {
-    suggestions.push('生长发育在正常范围内，继续保持良好的饮食和作息');
   }
 
   return suggestions;
 }
 
-
-
+/**
+ * 将标准差数据转换为百分位数据（用于图表显示）
+ * 使用正态分布近似转换
+ */
+export function convertSDToPercentile(sdPoints: SDPoint[]): import('../constants/growthStandards/types').PercentilePoint[] {
+  return sdPoints.map(point => ({
+    x: point.x,
+    P3: point.SD_neg2,   // -2SD ≈ P2.3 (约 P3)
+    P10: linearInterpolate(0, -2, -1, point.SD_neg2, point.SD_neg1), // -1.28SD ≈ P10
+    P25: linearInterpolate(0, -1, 0, point.SD_neg1, point.SD0),      // -0.67SD ≈ P25
+    P50: point.SD0,      // 0SD = P50
+    P75: linearInterpolate(0, 0, 1, point.SD0, point.SD_pos1),       // +0.67SD ≈ P75
+    P90: linearInterpolate(0, 1, 2, point.SD_pos1, point.SD_pos2),   // +1.28SD ≈ P90
+    P97: point.SD_pos2,  // +2SD ≈ P97.7 (约 P97)
+  }));
+}

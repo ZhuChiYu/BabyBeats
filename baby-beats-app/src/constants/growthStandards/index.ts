@@ -10,3 +10,4 @@ export { WST423_2022_MALE_HEIGHT_FOR_AGE } from './wst423_2022_male_height';
 export { WST423_2022_FEMALE_HEIGHT_FOR_AGE } from './wst423_2022_female_height';
 export { WST423_2022_MALE_HEAD_FOR_AGE } from './wst423_2022_male_head';
 export { WST423_2022_FEMALE_HEAD_FOR_AGE } from './wst423_2022_female_head';
+export { getStandardDataset } from './dataHelper';

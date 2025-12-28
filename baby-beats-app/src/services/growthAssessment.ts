@@ -39,7 +39,7 @@ export function assessWeight(
 
   if (!dataset) return null;
 
-  const result = calculatePercentile(dataset.points, ageMonths, record.weight);
+  const result = calculatePercentile(dataset.sdPoints, ageMonths, record.weight);
 
   // 获取历史百分位结果
   const previousResults: PercentileResult[] = [];
@@ -47,7 +47,7 @@ export function assessWeight(
     previousRecords.forEach(prevRecord => {
       if (prevRecord.weight) {
         const prevAgeMonths = calculateAgeInMonths(baby.birthday, prevRecord.date);
-        const prevResult = calculatePercentile(dataset.points, prevAgeMonths, prevRecord.weight);
+        const prevResult = calculatePercentile(dataset.sdPoints, prevAgeMonths, prevRecord.weight);
         previousResults.push(prevResult);
       }
     });
@@ -78,7 +78,7 @@ export function assessHeight(
 
   if (!dataset) return null;
 
-  const result = calculatePercentile(dataset.points, ageMonths, record.height);
+  const result = calculatePercentile(dataset.sdPoints, ageMonths, record.height);
 
   // 获取历史百分位结果
   const previousResults: PercentileResult[] = [];
@@ -86,7 +86,7 @@ export function assessHeight(
     previousRecords.forEach(prevRecord => {
       if (prevRecord.height) {
         const prevAgeMonths = calculateAgeInMonths(baby.birthday, prevRecord.date);
-        const prevResult = calculatePercentile(dataset.points, prevAgeMonths, prevRecord.height);
+        const prevResult = calculatePercentile(dataset.sdPoints, prevAgeMonths, prevRecord.height);
         previousResults.push(prevResult);
       }
     });
@@ -117,7 +117,7 @@ export function assessHeadCircumference(
 
   if (!dataset) return null;
 
-  const result = calculatePercentile(dataset.points, ageMonths, record.headCirc);
+  const result = calculatePercentile(dataset.sdPoints, ageMonths, record.headCirc);
 
   // 获取历史百分位结果
   const previousResults: PercentileResult[] = [];
@@ -125,7 +125,7 @@ export function assessHeadCircumference(
     previousRecords.forEach(prevRecord => {
       if (prevRecord.headCirc) {
         const prevAgeMonths = calculateAgeInMonths(baby.birthday, prevRecord.date);
-        const prevResult = calculatePercentile(dataset.points, prevAgeMonths, prevRecord.headCirc);
+        const prevResult = calculatePercentile(dataset.sdPoints, prevAgeMonths, prevRecord.headCirc);
         previousResults.push(prevResult);
       }
     });

@@ -7,7 +7,7 @@ import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Dimensions, TouchableOpacity, Alert } from 'react-native';
 import Svg, { Polygon, Circle, Line, Text as SvgText } from 'react-native-svg';
 import { GrowthRecord, Baby } from '../types';
-import { GrowthMetric, Sex, getStandardDataset } from '../constants/growthStandards';
+import { GrowthMetric, Sex, SDPoint, getStandardDataset } from '../constants/growthStandards';
 import { calculateAgeInMonths } from '../services/growthAssessment';
 import { calculatePercentile } from '../utils/percentileCalculator';
 import { Ionicons } from '@expo/vector-icons';
@@ -52,7 +52,7 @@ export const GrowthChart: React.FC<GrowthChartProps> = ({
         if (metric === 'height_for_age') value = r.height!;
         if (metric === 'head_for_age') value = r.headCirc!;
 
-        const result = calculatePercentile(dataset.points, ageMonths, value);
+        const result = calculatePercentile(dataset.sdPoints, ageMonths, value);
 
         return {
           x: ageMonths,
@@ -72,7 +72,7 @@ export const GrowthChart: React.FC<GrowthChartProps> = ({
     if (timeRange === '3years') displayMaxAge = 36;
 
     // 过滤标准曲线数据
-    const filteredStandardPoints = dataset.points.filter(p => p.x <= displayMaxAge);
+    const filteredStandardPoints = dataset.sdPoints.filter((p: SDPoint) => p.x <= displayMaxAge);
 
     return {
       babyPoints,
@@ -104,14 +104,17 @@ export const GrowthChart: React.FC<GrowthChartProps> = ({
 
   const handleInfoPress = () => {
     Alert.alert(
-      '生长曲线与百分位说明',
-      '百分位是评估儿童生长发育的重要指标：\n\n' +
-      '• P3：表示只有3%的同龄儿童低于此值\n' +
-      '• P50：中位数，50%的儿童在此值以下\n' +
-      '• P97：表示只有3%的同龄儿童高于此值\n\n' +
-      '正常范围：P3-P97 之间为正常范围\n' +
-      '需关注：低于P3或高于P97建议咨询医生\n\n' +
-      '本功能基于国家卫健委 WS/T 423-2022《7岁以下儿童生长标准》',
+      '生长曲线与标准差说明',
+      '本应用采用标准差（SD）法评估儿童生长发育：\n\n' +
+      '【标准差与百分位对应关系】\n' +
+      '• -2SD ≈ P3：仅3%的儿童低于此值\n' +
+      '• 0SD = P50：中位数，50%的儿童在此值\n' +
+      '• +2SD ≈ P97：仅3%的儿童高于此值\n\n' +
+      '【评价标准】\n' +
+      '• -2SD ~ +2SD：正常范围（绿色区域）\n' +
+      '• <-2SD 或 >+2SD：需关注，建议咨询医生\n' +
+      '• <-3SD 或 >+3SD：异常范围，需及时就医\n\n' +
+      '依据：国家卫健委 WS/T 423-2022\n《7岁以下儿童生长标准》',
       [{ text: '知道了', style: 'default' }]
     );
   };
@@ -178,11 +181,11 @@ export const GrowthChart: React.FC<GrowthChartProps> = ({
       <View style={styles.legendContainer}>
         <View style={styles.legendItem}>
           <View style={[styles.legendBox, { backgroundColor: 'rgba(52, 199, 89, 0.3)' }]} />
-          <Text style={styles.legendText}>P3-P97 正常范围</Text>
+          <Text style={styles.legendText}>-2SD~+2SD 正常</Text>
         </View>
         <View style={styles.legendItem}>
           <View style={[styles.legendDot, { backgroundColor: '#007AFF' }]} />
-          <Text style={styles.legendText}>P50 中位数</Text>
+          <Text style={styles.legendText}>中位数</Text>
         </View>
         <View style={styles.legendItem}>
           <View style={[styles.legendDot, { backgroundColor: '#FF3B30' }]} />
@@ -201,7 +204,7 @@ export const GrowthChart: React.FC<GrowthChartProps> = ({
       {/* 了解更多按钮 */}
       <TouchableOpacity style={styles.infoButton} onPress={handleInfoPress}>
         <Ionicons name="information-circle-outline" size={20} color="#007AFF" />
-        <Text style={styles.infoButtonText}>了解生长曲线与百分位</Text>
+        <Text style={styles.infoButtonText}>了解标准差与百分位</Text>
       </TouchableOpacity>
     </View>
   );
@@ -223,10 +226,10 @@ const PercentileChart: React.FC<PercentileChartProps> = ({
   yLabel,
   latestPoint,
 }) => {
-  // 计算 Y 轴范围
+  // 计算 Y 轴范围（使用 SD 数据）
   const allYValues = [
-    ...standardPoints.map(p => p.P3),
-    ...standardPoints.map(p => p.P97),
+    ...standardPoints.map(p => p.SD_neg3),
+    ...standardPoints.map(p => p.SD_pos3),
     ...babyPoints.map(p => p.y),
   ];
   const minY = Math.min(...allYValues) * 0.9;
@@ -250,13 +253,13 @@ const PercentileChart: React.FC<PercentileChartProps> = ({
     return paddingTop + plotHeight - ((y - minY) / (maxY - minY)) * plotHeight;
   };
 
-  // 生成百分位区域路径（P3-P97）
+  // 生成正常范围区域路径（-2SD 到 +2SD，约等于 P3-P97）
   const generateAreaPoints = () => {
-    const topPoints = standardPoints.map(p => `${xToScreen(p.x)},${yToScreen(p.P97)}`);
+    const topPoints = standardPoints.map(p => `${xToScreen(p.x)},${yToScreen(p.SD_pos2)}`);
     const bottomPoints = standardPoints
       .slice()
       .reverse()
-      .map(p => `${xToScreen(p.x)},${yToScreen(p.P3)}`);
+      .map(p => `${xToScreen(p.x)},${yToScreen(p.SD_neg2)}`);
     return [...topPoints, ...bottomPoints].join(' ');
   };
 
@@ -297,24 +300,24 @@ const PercentileChart: React.FC<PercentileChartProps> = ({
           );
         })}
 
-        {/* P3-P97 正常范围区域（绿色半透明填充） */}
+        {/* 正常范围区域填充（-2SD 到 +2SD，绿色半透明） */}
         <Polygon
           points={generateAreaPoints()}
           fill="rgba(52, 199, 89, 0.15)"
           stroke="none"
         />
 
-        {/* P97 边界线 */}
+        {/* +2SD 上边界线（约 P97） */}
         {standardPoints.map((p, i) => {
           if (i === 0) return null;
           const prev = standardPoints[i - 1];
           return (
             <Line
-              key={`p97-line-${i}`}
+              key={`sd-pos2-line-${i}`}
               x1={xToScreen(prev.x)}
-              y1={yToScreen(prev.P97)}
+              y1={yToScreen(prev.SD_pos2)}
               x2={xToScreen(p.x)}
-              y2={yToScreen(p.P97)}
+              y2={yToScreen(p.SD_pos2)}
               stroke="rgba(52, 199, 89, 0.5)"
               strokeWidth="1.5"
               strokeDasharray="4,3"
@@ -322,17 +325,17 @@ const PercentileChart: React.FC<PercentileChartProps> = ({
           );
         })}
 
-        {/* P3 边界线 */}
+        {/* -2SD 下边界线（约 P3） */}
         {standardPoints.map((p, i) => {
           if (i === 0) return null;
           const prev = standardPoints[i - 1];
           return (
             <Line
-              key={`p3-line-${i}`}
+              key={`sd-neg2-line-${i}`}
               x1={xToScreen(prev.x)}
-              y1={yToScreen(prev.P3)}
+              y1={yToScreen(prev.SD_neg2)}
               x2={xToScreen(p.x)}
-              y2={yToScreen(p.P3)}
+              y2={yToScreen(p.SD_neg2)}
               stroke="rgba(52, 199, 89, 0.5)"
               strokeWidth="1.5"
               strokeDasharray="4,3"
@@ -340,17 +343,17 @@ const PercentileChart: React.FC<PercentileChartProps> = ({
           );
         })}
 
-        {/* P50 中位数曲线 */}
+        {/* 中位数曲线（0SD = P50） */}
         {standardPoints.map((p, i) => {
           if (i === 0) return null;
           const prev = standardPoints[i - 1];
           return (
             <Line
-              key={`p50-line-${i}`}
+              key={`sd0-line-${i}`}
               x1={xToScreen(prev.x)}
-              y1={yToScreen(prev.P50)}
+              y1={yToScreen(prev.SD0)}
               x2={xToScreen(p.x)}
-              y2={yToScreen(p.P50)}
+              y2={yToScreen(p.SD0)}
               stroke="#007AFF"
               strokeWidth="2"
             />
@@ -425,38 +428,38 @@ const PercentileChart: React.FC<PercentileChartProps> = ({
           </SvgText>
         ))}
 
-        {/* 百分位标注（右侧） */}
+        {/* 标准差标注（右侧） */}
         {standardPoints.length > 0 && (
           <>
             <SvgText
               x={chartWidth - paddingRight + 5}
-              y={yToScreen(standardPoints[standardPoints.length - 1].P97)}
-              fontSize="11"
+              y={yToScreen(standardPoints[standardPoints.length - 1].SD_pos2)}
+              fontSize="10"
               fill="#34C759"
               textAnchor="start"
               fontWeight="600"
             >
-              97%
+              +2SD
             </SvgText>
             <SvgText
               x={chartWidth - paddingRight + 5}
-              y={yToScreen(standardPoints[standardPoints.length - 1].P50)}
-              fontSize="11"
+              y={yToScreen(standardPoints[standardPoints.length - 1].SD0)}
+              fontSize="10"
               fill="#007AFF"
               textAnchor="start"
               fontWeight="600"
             >
-              50%
+              中位
             </SvgText>
             <SvgText
               x={chartWidth - paddingRight + 5}
-              y={yToScreen(standardPoints[standardPoints.length - 1].P3)}
-              fontSize="11"
+              y={yToScreen(standardPoints[standardPoints.length - 1].SD_neg2)}
+              fontSize="10"
               fill="#34C759"
               textAnchor="start"
               fontWeight="600"
             >
-              3%
+              -2SD
             </SvgText>
           </>
         )}
