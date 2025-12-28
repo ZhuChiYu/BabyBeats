@@ -25,9 +25,14 @@ yarn-debug.log*
 **/.expo/
 
 # ================================
-# 📱 前端项目（不提交）
+# 📱 前端项目（提交源代码，忽略依赖和构建产物）
 # ================================
-baby-beats-app/
+# baby-beats-app/ # 已移除，现在提交前端源代码
+baby-beats-app/node_modules/
+baby-beats-app/ios/build/
+baby-beats-app/ios/Pods/
+baby-beats-app/android/app/build/
+baby-beats-app/.expo/
 
 # ================================
 # 📄 文档（只保留核心 README）
