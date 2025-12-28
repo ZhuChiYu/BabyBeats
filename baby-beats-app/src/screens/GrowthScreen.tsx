@@ -216,7 +216,24 @@ export const GrowthScreen: React.FC<GrowthScreenProps> = ({ navigation }) => {
               records={records}
               metric={typeInfo.metric}
             />
-              </View>
+          </View>
+        )}
+
+        {/* 无数据提示 */}
+        {records.length === 0 && (
+          <View style={styles.noDataCard}>
+            <Ionicons name="analytics-outline" size={64} color="#C7C7CC" />
+            <Text style={styles.noDataTitle}>暂无生长数据</Text>
+            <Text style={styles.noDataText}>
+              添加宝宝的体重、身高、头围等数据后，即可查看专业的生长曲线和发育评估
+            </Text>
+            <View style={styles.standardBadge}>
+              <Ionicons name="shield-checkmark" size={16} color="#34C759" />
+              <Text style={styles.standardBadgeText}>
+                采用国家卫健委 WS/T 423-2022 标准
+              </Text>
+            </View>
+          </View>
         )}
 
         {/* 最新评估结果 */}
@@ -382,6 +399,47 @@ const styles = StyleSheet.create({
   chartCard: {
     marginHorizontal: 16,
     marginBottom: 16,
+  },
+  noDataCard: {
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: 16,
+    marginBottom: 16,
+    padding: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  noDataTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#000',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  noDataText: {
+    fontSize: 14,
+    color: '#8E8E93',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  standardBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0FDF4',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 6,
+  },
+  standardBadgeText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#15803D',
   },
   assessmentSection: {
     marginHorizontal: 16,

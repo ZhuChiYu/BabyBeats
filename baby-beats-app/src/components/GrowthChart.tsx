@@ -104,18 +104,34 @@ export const GrowthChart: React.FC<GrowthChartProps> = ({
 
   const handleInfoPress = () => {
     Alert.alert(
-      '生长曲线与标准差说明',
-      '本应用采用标准差（SD）法评估儿童生长发育：\n\n' +
-      '【标准差与百分位对应关系】\n' +
-      '• -2SD ≈ P3：仅3%的儿童低于此值\n' +
-      '• 0SD = P50：中位数，50%的儿童在此值\n' +
-      '• +2SD ≈ P97：仅3%的儿童高于此值\n\n' +
+      '📊 如何解读生长曲线',
+      '【标准差（SD）法说明】\n' +
+      '本应用采用国家卫健委 WS/T 423-2022 标准，使用标准差法评估儿童生长发育。\n\n' +
+      
+      '【标准差与百分位对应】\n' +
+      '• -3SD ≈ P0.1：极低\n' +
+      '• -2SD ≈ P3：低于正常范围下限\n' +
+      '• -1SD ≈ P16：中下水平\n' +
+      '• 0SD = P50：中位数（正常）\n' +
+      '• +1SD ≈ P84：中上水平\n' +
+      '• +2SD ≈ P97：高于正常范围上限\n' +
+      '• +3SD ≈ P99.9：极高\n\n' +
+      
       '【评价标准】\n' +
-      '• -2SD ~ +2SD：正常范围（绿色区域）\n' +
-      '• <-2SD 或 >+2SD：需关注，建议咨询医生\n' +
-      '• <-3SD 或 >+3SD：异常范围，需及时就医\n\n' +
-      '依据：国家卫健委 WS/T 423-2022\n《7岁以下儿童生长标准》',
-      [{ text: '知道了', style: 'default' }]
+      '✅ -2SD ~ +2SD：正常范围\n' +
+      '⚠️ <-2SD 或 >+2SD：需要关注\n' +
+      '🚨 <-3SD 或 >+3SD：建议就医\n\n' +
+      
+      '【营养状况评价】\n' +
+      '依据 WS/T 423-2022 表3：\n' +
+      '• 体重-年龄 <-2SD：低体重\n' +
+      '• 身高-年龄 <-2SD：生长迟缓\n' +
+      '• 体重-身高 >+2SD：超重\n' +
+      '• 体重-身高 >+3SD：肥胖\n\n' +
+      
+      '【重要提示】\n' +
+      '本功能仅供参考，不能替代医学诊断。如有异常，请及时咨询儿科医生或儿保专家。',
+      [{ text: '我知道了', style: 'default' }]
     );
   };
 
@@ -193,18 +209,69 @@ export const GrowthChart: React.FC<GrowthChartProps> = ({
         </View>
       </View>
 
-      {/* 参考来源说明 */}
-      <View style={styles.referenceContainer}>
-        <Text style={styles.referenceTitle}>参考来源：</Text>
-        <Text style={styles.referenceText}>
-          依据国家卫健委 WS/T 423-2022《7岁以下儿童生长标准》的婴幼儿营养状况评价指标
-        </Text>
+      {/* 数据来源说明（增强版） */}
+      <View style={styles.dataSourceContainer}>
+        <View style={styles.dataSourceHeader}>
+          <Ionicons name="shield-checkmark" size={16} color="#34C759" />
+          <Text style={styles.dataSourceTitle}>权威数据来源</Text>
+        </View>
+        
+        <View style={styles.dataSourceContent}>
+          <View style={styles.dataSourceRow}>
+            <View style={styles.dataSourceIcon}>
+              <Ionicons name="document-text" size={14} color="#007AFF" />
+            </View>
+            <View style={styles.dataSourceInfo}>
+              <Text style={styles.dataSourceLabel}>标准名称</Text>
+              <Text style={styles.dataSourceValue}>WS/T 423-2022</Text>
+              <Text style={styles.dataSourceSubtitle}>《7岁以下儿童生长标准》</Text>
+            </View>
+          </View>
+
+          <View style={styles.dataSourceRow}>
+            <View style={styles.dataSourceIcon}>
+              <Ionicons name="business" size={14} color="#007AFF" />
+            </View>
+            <View style={styles.dataSourceInfo}>
+              <Text style={styles.dataSourceLabel}>发布机构</Text>
+              <Text style={styles.dataSourceValue}>中华人民共和国国家卫生健康委员会</Text>
+            </View>
+          </View>
+
+          <View style={styles.dataSourceRow}>
+            <View style={styles.dataSourceIcon}>
+              <Ionicons name="calendar" size={14} color="#007AFF" />
+            </View>
+            <View style={styles.dataSourceInfo}>
+              <Text style={styles.dataSourceLabel}>实施日期</Text>
+              <Text style={styles.dataSourceValue}>2023年3月1日</Text>
+            </View>
+          </View>
+
+          <View style={styles.dataSourceRow}>
+            <View style={styles.dataSourceIcon}>
+              <Ionicons name="flask" size={14} color="#007AFF" />
+            </View>
+            <View style={styles.dataSourceInfo}>
+              <Text style={styles.dataSourceLabel}>评价方法</Text>
+              <Text style={styles.dataSourceValue}>标准差（SD）法</Text>
+              <Text style={styles.dataSourceSubtitle}>基于中国儿童生长发育调查数据</Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.dataSourceNote}>
+          <Ionicons name="information-circle" size={12} color="#8E8E93" />
+          <Text style={styles.dataSourceNoteText}>
+            本标准适用于0-7岁中国儿童，替代 GB/T 31179-2014
+          </Text>
+        </View>
       </View>
 
       {/* 了解更多按钮 */}
       <TouchableOpacity style={styles.infoButton} onPress={handleInfoPress}>
-        <Ionicons name="information-circle-outline" size={20} color="#007AFF" />
-        <Text style={styles.infoButtonText}>了解标准差与百分位</Text>
+        <Ionicons name="help-circle-outline" size={20} color="#007AFF" />
+        <Text style={styles.infoButtonText}>如何解读生长曲线？</Text>
       </TouchableOpacity>
     </View>
   );
@@ -616,6 +683,76 @@ const styles = StyleSheet.create({
   legendText: {
     fontSize: 11,
     color: '#8E8E93',
+  },
+  dataSourceContainer: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    padding: 14,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  dataSourceHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  dataSourceTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#000',
+    marginLeft: 6,
+  },
+  dataSourceContent: {
+    gap: 10,
+  },
+  dataSourceRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  dataSourceIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    backgroundColor: '#EBF5FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+    marginTop: 2,
+  },
+  dataSourceInfo: {
+    flex: 1,
+  },
+  dataSourceLabel: {
+    fontSize: 11,
+    color: '#6B7280',
+    marginBottom: 2,
+  },
+  dataSourceValue: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: 2,
+  },
+  dataSourceSubtitle: {
+    fontSize: 11,
+    color: '#9CA3AF',
+    lineHeight: 15,
+  },
+  dataSourceNote: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  dataSourceNoteText: {
+    flex: 1,
+    fontSize: 11,
+    color: '#6B7280',
+    marginLeft: 6,
+    lineHeight: 16,
   },
   referenceContainer: {
     backgroundColor: '#F5F5F7',
