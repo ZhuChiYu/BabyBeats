@@ -82,8 +82,8 @@ export default function App() {
         // 加载云端宝宝数据
         try {
           const babies = await BabyApiService.getAll();
-          setBabies(babies);
-          
+      setBabies(babies);
+      
           if (babies.length > 0) {
             setCurrentBaby(babies[0].id);
             console.log('✅ 已加载云端宝宝数据:', babies.length, '个');
@@ -127,7 +127,7 @@ export default function App() {
           </>
         ) : (
           <>
-            <Stack.Screen name="Main" component={TabNavigator} />
+        <Stack.Screen name="Main" component={TabNavigator} />
         <Stack.Screen
           name="AddFeeding"
           component={AddFeedingScreen}
