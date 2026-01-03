@@ -24,8 +24,14 @@ import { FontSizeSettingsScreen } from './src/screens/FontSizeSettingsScreen';
 import { StatsReportScreen } from './src/screens/StatsReportScreen';
 import { getDatabase } from './src/database';
 import { useBabyStore } from './src/store/babyStore';
+import { useAuthStore } from './src/store/authStore';
 import { BabyService } from './src/services/babyService';
+import { AuthApiService } from './src/services/api/authService';
+import { BabyApiService } from './src/services/api/babyApiService';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
+// Auth screens
+import { LoginScreen } from './src/screens/auth/LoginScreen';
+import { RegisterScreen } from './src/screens/auth/RegisterScreen';
 // Health screens
 import { AddTemperatureScreen } from './src/screens/AddTemperatureScreen';
 import { AddVaccineScreen } from './src/screens/AddVaccineScreen';
@@ -48,6 +54,7 @@ const Stack = createNativeStackNavigator();
 export default function App() {
   const [isInitialized, setIsInitialized] = useState(false);
   const { setBabies, setCurrentBaby } = useBabyStore();
+  const { user, setUser, setLoading, isAuthenticated } = useAuthStore();
   
   useEffect(() => {
     initializeApp();
@@ -55,7 +62,9 @@ export default function App() {
   
   const initializeApp = async () => {
     try {
-      // 初始化数据库
+      setLoading(true);
+      
+      // 初始化数据库（用于本地缓存）
       const db = await getDatabase();
       
       // 运行数据库迁移
@@ -64,51 +73,34 @@ export default function App() {
       // 调试：输出数据库状态
       await debugDatabaseState();
       
-      // 确保临时用户存在（用于开发测试）
-      const tempUserId = 'temp-user-id';
-      const existingUser = await db.getFirstAsync(
-        'SELECT id FROM users WHERE id = ?',
-        [tempUserId]
-      );
-      
-      if (!existingUser) {
-        // 创建临时用户
-        const now = Date.now();
-        await db.runAsync(
-          `INSERT INTO users (id, email, password_hash, name, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?)`,
-          [tempUserId, 'temp@example.com', 'temp-hash', '临时用户', now, now]
-        );
-        console.log('✅ 临时用户已创建');
-      }
-      
-      // 加载宝宝数据
-      const babies = await BabyService.getAll(tempUserId);
-      setBabies(babies);
-      
-      // 如果没有宝宝，创建一个测试宝宝
-      if (babies.length === 0) {
-        console.log('⚠️ 没有宝宝，创建测试宝宝...');
-        const testBaby = await BabyService.create({
-          userId: tempUserId,
-          name: '测试宝宝',
-          gender: 'unknown',
-          birthday: Date.now(),
-          isArchived: false,
-        });
-        setBabies([testBaby]);
-        setCurrentBaby(testBaby.id);
-        console.log('✅ 测试宝宝已创建:', testBaby.id);
+      // 尝试恢复登录状态
+      const savedUser = await AuthApiService.restoreAuth();
+      if (savedUser) {
+        console.log('✅ 已恢复登录状态:', savedUser.email);
+        setUser(savedUser);
+        
+        // 加载云端宝宝数据
+        try {
+          const babies = await BabyApiService.getAll();
+          setBabies(babies);
+          
+          if (babies.length > 0) {
+            setCurrentBaby(babies[0].id);
+            console.log('✅ 已加载云端宝宝数据:', babies.length, '个');
+          }
+        } catch (error) {
+          console.error('加载宝宝数据失败:', error);
+        }
       } else {
-        // 确保有选中的宝宝
-        await syncBabyStore();
-        console.log('✅ 宝宝数据已同步');
+        console.log('⚠️ 未登录，显示登录页面');
       }
       
       setIsInitialized(true);
+      setLoading(false);
     } catch (error) {
       console.error('Failed to initialize app:', error);
-      setIsInitialized(true); // 即使失败也继续
+      setIsInitialized(true);
+      setLoading(false);
     }
   };
   
@@ -127,7 +119,15 @@ export default function App() {
               headerShown: false,
             }}
           >
-        <Stack.Screen name="Main" component={TabNavigator} />
+        {/* 登录注册流程 */}
+        {!isAuthenticated ? (
+          <>
+            <Stack.Screen name="Login" component={LoginScreen} />
+            <Stack.Screen name="Register" component={RegisterScreen} />
+          </>
+        ) : (
+          <>
+            <Stack.Screen name="Main" component={TabNavigator} />
         <Stack.Screen
           name="AddFeeding"
           component={AddFeedingScreen}
@@ -377,6 +377,8 @@ export default function App() {
             presentation: 'card',
           }}
         />
+          </>
+        )}
       </Stack.Navigator>
       <StatusBar style="auto" />
     </NavigationContainer>
