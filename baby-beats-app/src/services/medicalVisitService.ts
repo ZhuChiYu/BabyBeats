@@ -1,5 +1,6 @@
 import { getDatabase, generateId, getCurrentTimestamp } from '../database';
 import { MedicalVisit } from '../types';
+import { validateAndFixBabyId } from '../utils/babyValidation';
 
 export class MedicalVisitService {
   /**
@@ -19,6 +20,9 @@ export class MedicalVisitService {
     const db = await getDatabase();
     const id = generateId();
     const now = getCurrentTimestamp();
+    
+    // 验证并修正 baby_id
+    const validBabyId = await validateAndFixBabyId(data.babyId);
 
     await db.runAsync(
       `INSERT INTO medical_visits (
@@ -27,7 +31,7 @@ export class MedicalVisitService {
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
-        data.babyId,
+        validBabyId,
         data.visitTime,
         data.hospital || null,
         data.department || null,
@@ -43,7 +47,7 @@ export class MedicalVisitService {
 
     return {
       id,
-      babyId: data.babyId,
+      babyId: validBabyId,
       visitTime: data.visitTime,
       hospital: data.hospital,
       department: data.department,

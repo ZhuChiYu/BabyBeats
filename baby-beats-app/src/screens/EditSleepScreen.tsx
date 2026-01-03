@@ -11,10 +11,10 @@ import {View,
   Platform,
   KeyboardAvoidingView
 } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import { SleepService } from '../services/sleepService';
 import { ModalHeader } from '../components/ModalHeader';
+import { CustomDateTimePicker } from '../components/CustomDateTimePicker';
 import { Sleep } from '../types';
 import { Colors } from '../constants';
 import { format } from 'date-fns';
@@ -180,20 +180,17 @@ export const EditSleepScreen: React.FC<EditSleepScreenProps> = ({ navigation, ro
             </Text>
             <Ionicons name="time-outline" size={20} color={Colors.primary} />
           </TouchableOpacity>
-          {showStartPicker && (
-            <DateTimePicker
+          <CustomDateTimePicker
+            visible={showStartPicker}
+            mode="datetime"
               value={startTime}
-              mode="datetime"
-              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-              onChange={(event, selectedDate) => {
-                setShowStartPicker(Platform.OS === 'ios');
-                if (selectedDate) {
-                  setStartTime(selectedDate);
-                }
-              }}
+            onConfirm={(date) => {
+              setStartTime(date);
+              setShowStartPicker(false);
+            }}
+            onCancel={() => setShowStartPicker(false)}
               maximumDate={new Date()}
             />
-          )}
         </View>
         
         {/* 结束时间 */}
@@ -208,20 +205,17 @@ export const EditSleepScreen: React.FC<EditSleepScreenProps> = ({ navigation, ro
             </Text>
             <Ionicons name="time-outline" size={20} color={Colors.primary} />
           </TouchableOpacity>
-          {showEndPicker && (
-            <DateTimePicker
+          <CustomDateTimePicker
+            visible={showEndPicker}
+            mode="datetime"
               value={endTime}
-              mode="datetime"
-              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-              onChange={(event, selectedDate) => {
-                setShowEndPicker(Platform.OS === 'ios');
-                if (selectedDate) {
-                  setEndTime(selectedDate);
-                }
-              }}
+            onConfirm={(date) => {
+              setEndTime(date);
+              setShowEndPicker(false);
+            }}
+            onCancel={() => setShowEndPicker(false)}
               maximumDate={new Date()}
             />
-          )}
         </View>
         
         {/* 睡眠时长 */}

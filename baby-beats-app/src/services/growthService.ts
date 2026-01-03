@@ -1,11 +1,15 @@
 import { GrowthRecord } from '../types';
 import { getDatabase, generateId, getCurrentTimestamp } from '../database';
+import { validateAndFixBabyId } from '../utils/babyValidation';
 
 export class GrowthService {
   // 创建成长记录
   static async create(data: Omit<GrowthRecord, 'id' | 'createdAt' | 'updatedAt' | 'bmi'>): Promise<GrowthRecord> {
     const db = await getDatabase();
     const now = getCurrentTimestamp();
+    
+    // 验证并修正 baby_id
+    const validBabyId = await validateAndFixBabyId(data.babyId);
     
     // 自动计算BMI（如果有身高和体重）
     let bmi: number | undefined;
@@ -16,6 +20,7 @@ export class GrowthService {
     
     const record: GrowthRecord = {
       ...data,
+      babyId: validBabyId,
       bmi,
       id: generateId(),
       createdAt: now,

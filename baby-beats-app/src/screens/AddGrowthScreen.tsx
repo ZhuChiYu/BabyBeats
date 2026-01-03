@@ -11,11 +11,11 @@ import {View,
   Platform,
   KeyboardAvoidingView
 } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import { GrowthService } from '../services/growthService';
 import { useBabyStore } from '../store/babyStore';
 import { ModalHeader } from '../components/ModalHeader';
+import { CustomDateTimePicker } from '../components/CustomDateTimePicker';
 import { Colors } from '../constants';
 import { format } from 'date-fns';
 
@@ -170,19 +170,17 @@ export const AddGrowthScreen: React.FC<AddGrowthScreenProps> = ({ navigation, ro
             </Text>
           </TouchableOpacity>
 
-          {showDatePicker && (
-            <DateTimePicker
+          <CustomDateTimePicker
+            visible={showDatePicker}
+            mode="date"
               value={measurementDate}
-              mode="date"
-              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-              onChange={(event, selectedDate) => {
+            onConfirm={(date) => {
+              setMeasurementDate(date);
                 setShowDatePicker(false);
-                if (selectedDate) {
-                  setMeasurementDate(selectedDate);
-                }
               }}
+            onCancel={() => setShowDatePicker(false)}
+            maximumDate={new Date()}
             />
-          )}
         </View>
 
         {/* 体重 */}

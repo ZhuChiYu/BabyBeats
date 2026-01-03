@@ -51,6 +51,10 @@ export interface Diaper extends BaseEntity {
   poopAmount?: 'small' | 'medium' | 'large';
   peeAmount?: 'small' | 'medium' | 'large';
   hasAbnormality: boolean;
+  // 新增：尿量相关字段
+  wetWeight?: number;    // 湿尿布重量（克）
+  dryWeight?: number;    // 干尿布重量（克）
+  urineAmount?: number;  // 计算得出的尿量（克，湿重-干重）
   notes?: string;
 }
 

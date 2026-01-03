@@ -1,21 +1,28 @@
 import { Feeding } from '../types';
 import { getDatabase, generateId, getCurrentTimestamp } from '../database';
 import { syncManager } from './syncManager';
+import { validateAndFixBabyId } from '../utils/babyValidation';
 
 export class FeedingService {
   // 创建喂养记录
   static async create(data: Omit<Feeding, 'id' | 'createdAt' | 'updatedAt'>): Promise<Feeding> {
     const db = await getDatabase();
     const now = getCurrentTimestamp();
+    
+    // 验证并修正 baby_id
+    const validBabyId = await validateAndFixBabyId(data.babyId);
+    
     const feeding: Feeding = {
       ...data,
+      babyId: validBabyId,
       id: generateId(),
       createdAt: now,
       updatedAt: now,
     };
     
-    console.log('📝 创建喂养记录:', feeding.id, '类型:', feeding.type);
+    console.log('📝 创建喂养记录:', feeding.id, '类型:', feeding.type, 'baby_id:', feeding.babyId);
     
+    try {
     await db.runAsync(
       `INSERT INTO feedings (
         id, baby_id, time, type, left_duration, right_duration,
@@ -35,6 +42,11 @@ export class FeedingService {
         feeding.updatedAt,
       ]
     );
+      console.log('✅ 喂养记录插入成功');
+    } catch (error) {
+      console.error('❌ 插入喂养记录失败:', error);
+      throw error;
+    }
     
     // 自动同步到服务器（异步，不阻塞）
     this.autoSync(feeding).catch(err => {

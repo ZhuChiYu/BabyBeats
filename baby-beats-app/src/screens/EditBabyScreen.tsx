@@ -11,7 +11,7 @@ import {View,
   Platform,
   KeyboardAvoidingView
 } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import { CustomDateTimePicker } from '../components/CustomDateTimePicker';
 import { Ionicons } from '@expo/vector-icons';
 import { BabyService } from '../services/babyService';
 import { useBabyStore } from '../store/babyStore';
@@ -186,21 +186,17 @@ export const EditBabyScreen: React.FC<EditBabyScreenProps> = ({ navigation }) =>
             </Text>
           </TouchableOpacity>
 
-          {showDatePicker && (
-            <DateTimePicker
+          <CustomDateTimePicker
+            visible={showDatePicker}
+            mode="date"
               value={birthday}
-              mode="date"
-              display={Platform.OS === 'ios' ? 'spinner' : 'calendar'}
-              onChange={(event, selectedDate) => {
+            onConfirm={(date) => {
+              setBirthday(date);
                 setShowDatePicker(false);
-                if (selectedDate) {
-                  setBirthday(selectedDate);
-                }
               }}
+            onCancel={() => setShowDatePicker(false)}
               maximumDate={new Date()}
-              locale="zh-Hans-CN"
             />
-          )}
         </View>
 
         {/* 出生体重 */}

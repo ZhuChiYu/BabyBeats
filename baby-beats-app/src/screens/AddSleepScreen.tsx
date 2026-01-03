@@ -10,7 +10,7 @@ import {View,
   Platform,
   KeyboardAvoidingView
 } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import { CustomDateTimePicker } from '../components/CustomDateTimePicker';
 import { useBabyStore } from '../store/babyStore';
 import { SleepService } from '../services/sleepService';
 import { ModalHeader } from '../components/ModalHeader';
@@ -172,20 +172,16 @@ export const AddSleepScreen: React.FC<AddSleepScreenProps> = ({ navigation }) =>
           >
             <Text style={styles.timeText}>{formatTime(startTime)}</Text>
           </TouchableOpacity>
-          {showStartPicker && (
-            <DateTimePicker
+          <CustomDateTimePicker
+            visible={showStartPicker}
+            mode="time"
               value={startTime}
-              mode="time"
-              is24Hour={true}
-              display="spinner"
-              onChange={(event, selectedDate) => {
-                setShowStartPicker(Platform.OS === 'ios');
-                if (selectedDate) {
-                  setStartTime(selectedDate);
-                }
-              }}
+            onConfirm={(date) => {
+              setStartTime(date);
+              setShowStartPicker(false);
+            }}
+            onCancel={() => setShowStartPicker(false)}
             />
-          )}
         </View>
         
         {/* 结束时间 */}
@@ -197,20 +193,16 @@ export const AddSleepScreen: React.FC<AddSleepScreenProps> = ({ navigation }) =>
           >
             <Text style={styles.timeText}>{formatTime(endTime)}</Text>
           </TouchableOpacity>
-          {showEndPicker && (
-            <DateTimePicker
+          <CustomDateTimePicker
+            visible={showEndPicker}
+            mode="time"
               value={endTime}
-              mode="time"
-              is24Hour={true}
-              display="spinner"
-              onChange={(event, selectedDate) => {
-                setShowEndPicker(Platform.OS === 'ios');
-                if (selectedDate) {
-                  setEndTime(selectedDate);
-                }
-              }}
+            onConfirm={(date) => {
+              setEndTime(date);
+              setShowEndPicker(false);
+            }}
+            onCancel={() => setShowEndPicker(false)}
             />
-          )}
         </View>
         
         {/* 睡眠时长 */}

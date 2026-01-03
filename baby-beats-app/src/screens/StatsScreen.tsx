@@ -1,21 +1,23 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, Dimensions, TouchableOpacity, Alert, Modal, Platform } from 'react-native';
-import { LineChart, BarChart, PieChart } from 'react-native-chart-kit';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, Dimensions, TouchableOpacity, Alert, Platform, GestureResponderEvent } from 'react-native';
+import { LineChart, BarChart } from 'react-native-chart-kit';
 import { Ionicons } from '@expo/vector-icons';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import { CustomDateTimePicker } from '../components/CustomDateTimePicker';
 import { useBabyStore } from '../store/babyStore';
+import { UrineStandardService } from '../utils/urineStandard';
 import { FeedingService } from '../services/feedingService';
 import { SleepService } from '../services/sleepService';
 import { DiaperService } from '../services/diaperService';
 import { PumpingService } from '../services/pumpingService';
-import { format, subDays, startOfDay, endOfDay, differenceInDays } from 'date-fns';
+import { GrowthService } from '../services/growthService';
+import { format, subDays, startOfDay, endOfDay, differenceInDays, isToday } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import { Colors } from '../constants';
 import { useFocusEffect } from '@react-navigation/native';
 
 const screenWidth = Dimensions.get('window').width;
 
-type TimeRange = '7days' | '14days' | '30days' | '3months' | 'custom';
+type TimeRange = '7days' | '14days' | '30days' | 'custom';
 
 interface StatsScreenProps {
   navigation: any;
@@ -26,12 +28,33 @@ export const StatsScreen: React.FC<StatsScreenProps> = ({ navigation }) => {
   const currentBaby = getCurrentBaby();
   
   const [timeRange, setTimeRange] = useState<TimeRange>('7days');
-  const [feedingData, setFeedingData] = useState<any>(null);
+  const [milkAmountData, setMilkAmountData] = useState<any>(null);
   const [sleepData, setSleepData] = useState<any>(null);
-  const [diaperData, setDiaperData] = useState<any>(null);
+  const [urineData, setUrineData] = useState<any>(null);
+  const [poopData, setPoopData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   
-  // 保存原始数据用于报告生成
+  // 保存图表标签以便点击时使用
+  const [chartLabels, setChartLabels] = useState<string[]>([]);
+  
+  // 每个图表的数据点提示信息
+  const [milkTooltip, setMilkTooltip] = useState<{visible: boolean; label: string; value: string; unit: string}>({
+    visible: false, label: '', value: '', unit: '',
+  });
+  const [sleepTooltip, setSleepTooltip] = useState<{visible: boolean; label: string; value: string; unit: string}>({
+    visible: false, label: '', value: '', unit: '',
+  });
+  const [urineTooltip, setUrineTooltip] = useState<{visible: boolean; label: string; value: string; unit: string}>({
+    visible: false, label: '', value: '', unit: '',
+  });
+  const [poopTooltip, setPoopTooltip] = useState<{visible: boolean; label: string; value: string; unit: string}>({
+    visible: false, label: '', value: '', unit: '',
+  });
+  
+  // 宝宝最新体重
+  const [latestWeight, setLatestWeight] = useState<number>(10);
+  
+  // 保存原始数据
   const [rawFeedings, setRawFeedings] = useState<any[]>([]);
   const [rawSleeps, setRawSleeps] = useState<any[]>([]);
   const [rawDiapers, setRawDiapers] = useState<any[]>([]);
@@ -45,18 +68,35 @@ export const StatsScreen: React.FC<StatsScreenProps> = ({ navigation }) => {
   
   useEffect(() => {
     if (currentBaby) {
+      loadBabyWeight();
       loadStats();
     }
   }, [currentBaby?.id, timeRange, customStartDate, customEndDate]);
 
-  // 监听页面聚焦，自动刷新数据
   useFocusEffect(
     React.useCallback(() => {
       if (currentBaby) {
+        loadBabyWeight();
         loadStats();
       }
     }, [currentBaby?.id, timeRange, customStartDate, customEndDate])
   );
+  
+  const loadBabyWeight = async () => {
+    if (!currentBaby) return;
+    try {
+      const growthRecords = await GrowthService.getByBabyId(currentBaby.id);
+      if (growthRecords.length > 0) {
+        // 获取最近的体重记录
+        const latestRecord = growthRecords[0];
+        if (latestRecord.weight) {
+          setLatestWeight(latestRecord.weight);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load baby weight:', error);
+    }
+  };
   
   const loadStats = async () => {
     if (!currentBaby) return;
@@ -67,14 +107,17 @@ export const StatsScreen: React.FC<StatsScreenProps> = ({ navigation }) => {
       let endDate: Date;
       let days: number;
       
-      if (timeRange === 'custom') {
+      if (timeRange === 'today') {
+        startDate = startOfDay(new Date());
+        endDate = endOfDay(new Date());
+        days = 1;
+      } else if (timeRange === 'custom') {
         startDate = customStartDate;
         endDate = customEndDate;
         days = differenceInDays(endDate, startDate) + 1;
       } else {
         days = timeRange === '7days' ? 7 : 
-               timeRange === '14days' ? 14 : 
-               timeRange === '3months' ? 90 : 30;
+               timeRange === '14days' ? 14 : 30;
         const today = startOfDay(new Date());
         startDate = subDays(today, days - 1);
         endDate = endOfDay(new Date());
@@ -104,47 +147,8 @@ export const StatsScreen: React.FC<StatsScreenProps> = ({ navigation }) => {
       setRawSleeps(sleeps);
       setRawDiapers(diapers);
       
-      // 按日期分组统计
-      const dateLabels: string[] = [];
-      const feedingCounts: number[] = [];
-      const sleepDurations: number[] = [];
-      const diaperCounts: number[] = [];
-      
-      for (let i = days - 1; i >= 0; i--) {
-        const date = subDays(endDate, i);
-        const dateStart = startOfDay(date).getTime();
-        const dateEnd = dateStart + 24 * 60 * 60 * 1000 - 1;
-        
-        dateLabels.push(format(date, 'MM/dd'));
-        
-        // 喂养次数
-        const dayFeedings = feedings.filter(f => f.time >= dateStart && f.time <= dateEnd);
-        feedingCounts.push(dayFeedings.length);
-        
-        // 睡眠时长
-        const daySleeps = sleeps.filter(s => s.startTime >= dateStart && s.startTime <= dateEnd);
-        const totalSleepMinutes = daySleeps.reduce((sum, s) => sum + s.duration, 0);
-        sleepDurations.push(Math.round(totalSleepMinutes / 60 * 10) / 10); // 转换为小时
-        
-        // 尿布次数
-        const dayDiapers = diapers.filter(d => d.time >= dateStart && d.time <= dateEnd);
-        diaperCounts.push(dayDiapers.length);
-      }
-      
-      setFeedingData({
-        labels: dateLabels,
-        datasets: [{ data: feedingCounts }],
-      });
-      
-      setSleepData({
-        labels: dateLabels,
-        datasets: [{ data: sleepDurations.length > 0 ? sleepDurations : [0] }],
-      });
-      
-      setDiaperData({
-        labels: dateLabels,
-        datasets: [{ data: diaperCounts }],
-      });
+      // 趋势统计
+      calculateTrendStats(feedings, sleeps, diapers, startDate, endDate, days);
       
     } catch (error) {
       console.error('Failed to load stats:', error);
@@ -153,37 +157,91 @@ export const StatsScreen: React.FC<StatsScreenProps> = ({ navigation }) => {
     }
   };
   
+  const calculateTrendStats = (
+    feedings: any[], 
+    sleeps: any[], 
+    diapers: any[], 
+    startDate: Date, 
+    endDate: Date, 
+    days: number
+  ) => {
+    const dateLabels: string[] = [];
+    const milkAmounts: number[] = [];
+    const sleepDurations: number[] = [];
+    const urineAmounts: number[] = [];
+    const poopCounts: number[] = [];
+    
+    for (let i = days - 1; i >= 0; i--) {
+      const date = subDays(endDate, i);
+      const dateStart = startOfDay(date).getTime();
+      const dateEnd = dateStart + 24 * 60 * 60 * 1000 - 1;
+      
+      dateLabels.push(format(date, 'MM/dd'));
+      
+      // 奶量（ml）- 只统计瓶喂和配方奶
+      const dayFeedings = feedings.filter(f => f.time >= dateStart && f.time <= dateEnd);
+      const dayMilk = dayFeedings.reduce((sum, f) => {
+        if (f.type === 'breast') return sum;
+        return sum + (f.milkAmount || 0);
+      }, 0);
+      milkAmounts.push(dayMilk);
+      
+      // 睡眠时长
+      const daySleeps = sleeps.filter(s => s.startTime >= dateStart && s.startTime <= dateEnd);
+      const totalSleepMinutes = daySleeps.reduce((sum, s) => sum + s.duration, 0);
+      sleepDurations.push(Math.round(totalSleepMinutes / 60 * 10) / 10);
+      
+      // 尿量统计
+      const dayDiapers = diapers.filter(d => d.time >= dateStart && d.time <= dateEnd);
+      const dayUrineAmount = dayDiapers
+        .filter(d => (d.type === 'pee' || d.type === 'both') && d.urineAmount)
+        .reduce((sum, d) => sum + d.urineAmount, 0);
+      urineAmounts.push(Math.round(dayUrineAmount));
+      
+      // 大便次数
+      const dayPoopCount = dayDiapers.filter(d => d.type === 'poop' || d.type === 'both').length;
+      poopCounts.push(dayPoopCount);
+    }
+    
+    // 保存标签用于点击事件
+    setChartLabels(dateLabels);
+    
+    setMilkAmountData({
+      labels: dateLabels,
+      datasets: [{ data: milkAmounts.length > 0 ? milkAmounts : [0] }],
+    });
+    
+    setSleepData({
+      labels: dateLabels,
+      datasets: [{ data: sleepDurations.length > 0 ? sleepDurations : [0] }],
+    });
+    
+    setUrineData({
+      labels: dateLabels,
+      datasets: [{ data: urineAmounts.length > 0 ? urineAmounts : [0] }],
+    });
+    
+    setPoopData({
+      labels: dateLabels,
+      datasets: [{ data: poopCounts.length > 0 ? poopCounts : [0] }],
+    });
+  };
+  
   const getDays = () => {
+    if (timeRange === 'today') return 1;
     if (timeRange === 'custom') {
       return differenceInDays(customEndDate, customStartDate) + 1;
     }
     return timeRange === '7days' ? 7 : 
-           timeRange === '14days' ? 14 : 
-           timeRange === '3months' ? 90 : 30;
+           timeRange === '14days' ? 14 : 30;
   };
 
-  // 计算图表宽度：每天至少50像素，最小为屏幕宽度
   const getChartWidth = () => {
+    if (timeRange === 'today') return screenWidth - 48;
     const days = getDays();
     const minWidth = screenWidth - 48;
     const dynamicWidth = days * 50;
     return Math.max(minWidth, dynamicWidth);
-  };
-
-  // 处理日期选择
-  const handleDateChange = (event: any, selectedDate?: Date) => {
-    if (Platform.OS === 'android') {
-      setShowDatePicker(false);
-    }
-    
-    if (selectedDate) {
-      setTempDate(selectedDate);
-      if (Platform.OS === 'ios') {
-        // iOS 不自动关闭，需要在确认按钮中处理
-        return;
-      }
-      confirmDateSelection(selectedDate);
-    }
   };
 
   const confirmDateSelection = (date: Date) => {
@@ -211,78 +269,43 @@ export const StatsScreen: React.FC<StatsScreenProps> = ({ navigation }) => {
     setShowDatePicker(true);
   };
 
-  const handleTimeRangeChange = (range: TimeRange) => {
-    setTimeRange(range);
+  const getUrineStatusColor = (status: string) => {
+    switch (status) {
+      case 'low':
+        return '#FF6B6B';
+      case 'high':
+        return '#4ECDC4';
+      case 'normal':
+        return '#51CF66';
+      default:
+        return '#8E8E93';
+    }
   };
 
-  const getDateRangeText = () => {
-    if (timeRange === 'custom') {
-      return `${format(customStartDate, 'MM/dd')} - ${format(customEndDate, 'MM/dd')}`;
+  const getUrineStatusBgColor = (status: string) => {
+    switch (status) {
+      case 'low':
+        return '#FFE5E5';
+      case 'high':
+        return '#E0F9F7';
+      case 'normal':
+        return '#E7F5E7';
+      default:
+        return '#F5F5F7';
     }
-    return null;
   };
 
-  const generateReport = () => {
-    if (!currentBaby) {
-      Alert.alert('提示', '请先选择宝宝');
-      return;
+  const getUrineStatusIcon = (status: string) => {
+    switch (status) {
+      case 'low':
+        return 'warning';
+      case 'high':
+        return 'arrow-up-circle';
+      case 'normal':
+        return 'checkmark-circle';
+      default:
+        return 'help-circle';
     }
-
-    // 计算统计数据
-    const days = getDays();
-    
-    // 喂养统计
-    const feedingStats = {
-      totalCount: rawFeedings.length,
-      avgPerDay: rawFeedings.length / days,
-      totalAmount: rawFeedings.reduce((sum, f) => sum + (f.amount || 0), 0),
-      totalDuration: rawFeedings.reduce((sum, f) => sum + (f.duration || 0) + (f.leftDuration || 0) + (f.rightDuration || 0), 0),
-    };
-
-    // 睡眠统计
-    const sleepDurations = rawSleeps.map(s => s.duration || 0);
-    const sleepStats = {
-      totalDuration: sleepDurations.reduce((sum, d) => sum, 0),
-      avgPerDay: sleepDurations.reduce((sum, d) => sum + d, 0) / 60 / days,
-      longestSleep: Math.max(...sleepDurations, 0),
-    };
-
-    // 尿布统计
-    const diaperStats = {
-      totalCount: rawDiapers.length,
-      avgPerDay: rawDiapers.length / days,
-      peeCount: rawDiapers.filter(d => d.type === 'pee' || d.type === 'both').length,
-      poopCount: rawDiapers.filter(d => d.type === 'poop' || d.type === 'both').length,
-    };
-
-    // 获取日期范围
-    let startDate: Date;
-    let endDate: Date;
-    
-    if (timeRange === 'custom') {
-      startDate = customStartDate;
-      endDate = customEndDate;
-    } else {
-      const today = startOfDay(new Date());
-      const daysCount = timeRange === '7days' ? 7 : 
-                       timeRange === '14days' ? 14 : 
-                       timeRange === '3months' ? 90 : 30;
-      startDate = subDays(today, daysCount - 1);
-      endDate = endOfDay(new Date());
-    }
-
-    // 导航到报告页面
-    (navigation as any).navigate('StatsReport', {
-      babyName: currentBaby.name,
-      startDate,
-      endDate,
-      feedingData,
-      sleepData,
-      diaperData,
-      feedingStats,
-      sleepStats,
-      diaperStats,
-    });
   };
 
   const chartConfig = {
@@ -295,63 +318,132 @@ export const StatsScreen: React.FC<StatsScreenProps> = ({ navigation }) => {
     style: {
       borderRadius: 16,
     },
-    propsForDots: {
-      r: '4',
-      strokeWidth: '2',
-      stroke: '#007AFF',
+    propsForBackgroundLines: {
+      strokeDasharray: '',
+      stroke: '#E5E5EA',
+      strokeWidth: 1,
     },
   };
-  
-  if (!currentBaby) {
 
+  // 处理图表数据点点击
+  const handleDataPointClick = (data: any, chartType: string, unit: string) => {
+    try {
+      const { index, value } = data;
+      const dateLabel = chartLabels && chartLabels[index] ? chartLabels[index] : '';
+      
+      const tooltipData = {
+        visible: true,
+        label: dateLabel || chartType,
+        value: typeof value === 'number' ? value.toFixed(1) : String(value),
+        unit: unit,
+      };
+
+      // 根据图表类型设置对应的提示
+      if (chartType === '奶量') {
+        setMilkTooltip(tooltipData);
+        setTimeout(() => setMilkTooltip(prev => ({ ...prev, visible: false })), 3000);
+      } else if (chartType === '睡眠') {
+        setSleepTooltip(tooltipData);
+        setTimeout(() => setSleepTooltip(prev => ({ ...prev, visible: false })), 3000);
+      }
+    } catch (error) {
+      console.log('处理数据点点击出错:', error);
+    }
+  };
+  
+  // 处理柱状图点击（使用触摸事件计算位置）
+  const handleBarChartPress = (event: GestureResponderEvent, data: any, chartType: string, unit: string) => {
+    try {
+      const { locationX } = event.nativeEvent;
+      const chartWidth = getChartWidth();
+      
+      // react-native-chart-kit 的 BarChart 布局参数
+      // 左侧有Y轴标签和一些padding
+      const paddingLeft = 60;
+      const paddingRight = 16;
+      const availableWidth = chartWidth - paddingLeft - paddingRight;
+      const barCount = data.labels.length;
+      
+      // 每个柱子区域的宽度（包括柱子和间距）
+      const barSectionWidth = availableWidth / barCount;
+      
+      // 计算点击位置相对于图表区域的位置
+      const relativeX = locationX - paddingLeft;
+      
+      // 计算点击的是哪个柱子
+      // 使用 Math.round 来获取最接近的柱子
+      let clickedIndex = Math.round((relativeX - barSectionWidth / 2) / barSectionWidth);
+      
+      // 限制在有效范围内
+      clickedIndex = Math.max(0, Math.min(clickedIndex, barCount - 1));
+      
+      console.log('柱状图点击调试:', {
+        chartType,
+        locationX,
+        relativeX,
+        barSectionWidth,
+        clickedIndex,
+        dateLabel: data.labels[clickedIndex],
+        allLabels: data.labels,
+        allValues: data.datasets[0].data
+      });
+      
+      if (clickedIndex >= 0 && clickedIndex < data.labels.length) {
+        const value = data.datasets[0].data[clickedIndex];
+        const dateLabel = data.labels[clickedIndex];
+        
+        const tooltipData = {
+          visible: true,
+          label: dateLabel,
+          value: typeof value === 'number' ? value.toFixed(1) : String(value),
+          unit: unit,
+        };
+
+        // 根据图表类型设置对应的提示
+        if (chartType === '尿量') {
+          setUrineTooltip(tooltipData);
+          setTimeout(() => setUrineTooltip(prev => ({ ...prev, visible: false })), 3000);
+        } else if (chartType === '大便次数') {
+          setPoopTooltip(tooltipData);
+          setTimeout(() => setPoopTooltip(prev => ({ ...prev, visible: false })), 3000);
+        }
+      }
+    } catch (error) {
+      console.log('处理柱状图点击出错:', error);
+    }
+  };
+
+  if (!currentBaby) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.emptyContainer}>
-          <Ionicons name="person-add-outline" size={64} color="#C7C7CC" />
-          <Text style={styles.emptyText}>请先创建宝宝档案</Text>
-        </View>
+        <Text style={styles.emptyText}>请先添加宝宝信息</Text>
       </SafeAreaView>
     );
   }
-  
+
   return (
     <SafeAreaView style={styles.container}>
+      {/* 时间范围选择 */}
       <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <Text style={styles.headerTitle}>数据统计</Text>
-          <TouchableOpacity 
-            style={styles.reportButton}
-            onPress={generateReport}
-          >
-            <Ionicons name="document-text-outline" size={20} color={Colors.primary} />
-            <Text style={styles.reportButtonText}>生成报告</Text>
-          </TouchableOpacity>
-        </View>
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false}
-          style={styles.timeRangeSelector}
-          contentContainerStyle={styles.timeRangeSelectorContent}
-        >
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterContainer}>
           {[
-            { value: '7days', label: '7天' },
-            { value: '14days', label: '14天' },
-            { value: '30days', label: '30天' },
-            { value: '3months', label: '3个月' },
+            { value: '7days', label: '近7天' },
+            { value: '14days', label: '近14天' },
+            { value: '30days', label: '近30天' },
             { value: 'custom', label: '自定义' },
           ].map(range => (
             <TouchableOpacity
               key={range.value}
               style={[
-                styles.rangeButton,
-                timeRange === range.value && styles.rangeButtonActive,
+                styles.filterButton,
+                timeRange === range.value && styles.filterButtonActive,
               ]}
-              onPress={() => handleTimeRangeChange(range.value as TimeRange)}
+              onPress={() => setTimeRange(range.value as TimeRange)}
             >
               <Text
                 style={[
-                  styles.rangeButtonText,
-                  timeRange === range.value && styles.rangeButtonTextActive,
+                  styles.filterButtonText,
+                  timeRange === range.value && styles.filterButtonTextActive,
                 ]}
               >
                 {range.label}
@@ -360,173 +452,213 @@ export const StatsScreen: React.FC<StatsScreenProps> = ({ navigation }) => {
           ))}
         </ScrollView>
         
-        {/* 自定义日期范围 */}
         {timeRange === 'custom' && (
-          <View style={styles.customDateContainer}>
-            <TouchableOpacity 
-              style={styles.dateButton}
-              onPress={() => openDatePicker('start')}
-            >
-              <Ionicons name="calendar-outline" size={16} color={Colors.primary} />
-              <Text style={styles.dateButtonLabel}>开始</Text>
-              <Text style={styles.dateButtonText}>
-                {format(customStartDate, 'yyyy/MM/dd', { locale: zhCN })}
-              </Text>
+          <View style={styles.customDateRow}>
+            <TouchableOpacity style={styles.dateButton} onPress={() => openDatePicker('start')}>
+              <Text style={styles.dateButtonText}>{format(customStartDate, 'MM/dd')}</Text>
             </TouchableOpacity>
-            
-            <Ionicons name="arrow-forward" size={16} color="#8E8E93" />
-            
-            <TouchableOpacity 
-              style={styles.dateButton}
-              onPress={() => openDatePicker('end')}
-            >
-              <Ionicons name="calendar-outline" size={16} color={Colors.primary} />
-              <Text style={styles.dateButtonLabel}>结束</Text>
-              <Text style={styles.dateButtonText}>
-                {format(customEndDate, 'yyyy/MM/dd', { locale: zhCN })}
-              </Text>
+            <Text style={styles.dateSeparator}>至</Text>
+            <TouchableOpacity style={styles.dateButton} onPress={() => openDatePicker('end')}>
+              <Text style={styles.dateButtonText}>{format(customEndDate, 'MM/dd')}</Text>
             </TouchableOpacity>
           </View>
         )}
       </View>
       
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* 喂养趋势 */}
-        {feedingData && (
-          <View style={styles.chartCard}>
-            <View style={styles.chartHeader}>
-              <View style={styles.chartTitleRow}>
-                <Ionicons name="nutrition" size={24} color={Colors.feeding} />
-                <Text style={styles.chartTitle}>喂养趋势</Text>
+        {/* 趋势图表 */}
+        <View>
+            {/* 奶量趋势 */}
+            {milkAmountData && (
+              <View style={styles.chartCard}>
+                <View style={styles.chartHeader}>
+                  <View style={styles.chartTitleRow}>
+                    <Ionicons name="nutrition" size={24} color={Colors.feeding} />
+                    <Text style={styles.chartTitle}>奶量趋势</Text>
+                  </View>
+                  <Text style={styles.chartUnit}>ml/天</Text>
+                </View>
+                <View style={styles.chartWrapper}>
+                  {milkTooltip.visible && (
+                    <View style={styles.chartTooltip}>
+                      <View style={styles.tooltipContent}>
+                        <Text style={styles.tooltipLabel}>{milkTooltip.label}</Text>
+                        <Text style={styles.tooltipValue}>
+                          {milkTooltip.value} {milkTooltip.unit}
+                        </Text>
+                      </View>
+                    </View>
+                  )}
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                    <LineChart
+                      data={milkAmountData}
+                      width={getChartWidth()}
+                      height={220}
+                      chartConfig={{
+                        ...chartConfig,
+                        color: (opacity = 1) => `rgba(255, 149, 0, ${opacity})`,
+                        propsForDots: {
+                          r: '4',
+                          strokeWidth: '2',
+                          stroke: Colors.feeding,
+                        },
+                      }}
+                      bezier
+                      style={styles.chart}
+                      onDataPointClick={(data) => handleDataPointClick(data, '奶量', 'ml')}
+                    />
+                  </ScrollView>
+                </View>
               </View>
-              <Text style={styles.chartUnit}>次/天</Text>
-            </View>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              <LineChart
-                data={feedingData}
-                width={getChartWidth()}
-                height={220}
-                chartConfig={{
-                  ...chartConfig,
-                  color: (opacity = 1) => `rgba(255, 149, 0, ${opacity})`,
-                  propsForDots: {
-                    r: '4',
-                    strokeWidth: '2',
-                    stroke: Colors.feeding,
-                  },
-                }}
-                bezier
-                style={styles.chart}
-              />
-            </ScrollView>
-          </View>
-        )}
-        
-        {/* 睡眠趋势 */}
-        {sleepData && (
-          <View style={styles.chartCard}>
-            <View style={styles.chartHeader}>
-              <View style={styles.chartTitleRow}>
-                <Ionicons name="moon" size={24} color={Colors.sleep} />
-                <Text style={styles.chartTitle}>睡眠趋势</Text>
+            )}
+            
+            {/* 睡眠趋势 */}
+            {sleepData && (
+              <View style={styles.chartCard}>
+                <View style={styles.chartHeader}>
+                  <View style={styles.chartTitleRow}>
+                    <Ionicons name="moon" size={24} color={Colors.sleep} />
+                    <Text style={styles.chartTitle}>睡眠趋势</Text>
+                  </View>
+                  <Text style={styles.chartUnit}>小时/天</Text>
+                </View>
+                <View style={styles.chartWrapper}>
+                  {sleepTooltip.visible && (
+                    <View style={styles.chartTooltip}>
+                      <View style={styles.tooltipContent}>
+                        <Text style={styles.tooltipLabel}>{sleepTooltip.label}</Text>
+                        <Text style={styles.tooltipValue}>
+                          {sleepTooltip.value} {sleepTooltip.unit}
+                        </Text>
+                      </View>
+                    </View>
+                  )}
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                    <LineChart
+                      data={sleepData}
+                      width={getChartWidth()}
+                      height={220}
+                      chartConfig={{
+                        ...chartConfig,
+                        color: (opacity = 1) => `rgba(88, 86, 214, ${opacity})`,
+                        propsForDots: {
+                          r: '4',
+                          strokeWidth: '2',
+                          stroke: Colors.sleep,
+                        },
+                      }}
+                      bezier
+                      style={styles.chart}
+                      onDataPointClick={(data) => handleDataPointClick(data, '睡眠', '小时')}
+                    />
+                  </ScrollView>
+                </View>
               </View>
-              <Text style={styles.chartUnit}>小时/天</Text>
-            </View>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              <LineChart
-                data={sleepData}
-                width={getChartWidth()}
-                height={220}
-                chartConfig={{
-                  ...chartConfig,
-                  color: (opacity = 1) => `rgba(88, 86, 214, ${opacity})`,
-                  propsForDots: {
-                    r: '4',
-                    strokeWidth: '2',
-                    stroke: Colors.sleep,
-                  },
-                }}
-                bezier
-                style={styles.chart}
-              />
-            </ScrollView>
-          </View>
-        )}
-        
-        {/* 尿布统计 */}
-        {diaperData && (
-          <View style={styles.chartCard}>
-            <View style={styles.chartHeader}>
-              <View style={styles.chartTitleRow}>
-                <Ionicons name="water" size={24} color={Colors.diaper} />
-                <Text style={styles.chartTitle}>尿布统计</Text>
+            )}
+            
+            {/* 尿量统计 */}
+            {urineData && (
+              <View style={styles.chartCard}>
+                <View style={styles.chartHeader}>
+                  <View style={styles.chartTitleRow}>
+                    <Ionicons name="water-outline" size={24} color="#34C759" />
+                    <Text style={styles.chartTitle}>尿量统计</Text>
+                  </View>
+                  <Text style={styles.chartUnit}>g/天</Text>
+                </View>
+                <View style={styles.chartWrapper}>
+                  {urineTooltip.visible && (
+                    <View style={styles.chartTooltip}>
+                      <View style={styles.tooltipContent}>
+                        <Text style={styles.tooltipLabel}>{urineTooltip.label}</Text>
+                        <Text style={styles.tooltipValue}>
+                          {urineTooltip.value} {urineTooltip.unit}
+                        </Text>
+                      </View>
+                    </View>
+                  )}
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                    <TouchableOpacity 
+                      activeOpacity={1}
+                      onPress={(e) => handleBarChartPress(e, urineData, '尿量', 'g')}
+                    >
+                      <BarChart
+                        data={urineData}
+                        width={getChartWidth()}
+                        height={220}
+                        chartConfig={{
+                          ...chartConfig,
+                          color: (opacity = 1) => `rgba(52, 199, 89, ${opacity})`,
+                        }}
+                        style={styles.chart}
+                        yAxisLabel=""
+                        yAxisSuffix=""
+                        fromZero
+                      />
+                    </TouchableOpacity>
+                  </ScrollView>
+                </View>
               </View>
-              <Text style={styles.chartUnit}>次/天</Text>
-            </View>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              <BarChart
-                data={diaperData}
-                width={getChartWidth()}
-                height={220}
-                chartConfig={{
-                  ...chartConfig,
-                  color: (opacity = 1) => `rgba(52, 199, 89, ${opacity})`,
-                }}
-                style={styles.chart}
-                yAxisLabel=""
-                yAxisSuffix=""
-                fromZero
-              />
-            </ScrollView>
+            )}
+            
+            {/* 大便次数 */}
+            {poopData && (
+              <View style={styles.chartCard}>
+                <View style={styles.chartHeader}>
+                  <View style={styles.chartTitleRow}>
+                    <Ionicons name="medical" size={24} color="#FF9500" />
+                    <Text style={styles.chartTitle}>大便次数</Text>
+                  </View>
+                  <Text style={styles.chartUnit}>次/天</Text>
+                </View>
+                <View style={styles.chartWrapper}>
+                  {poopTooltip.visible && (
+                    <View style={styles.chartTooltip}>
+                      <View style={styles.tooltipContent}>
+                        <Text style={styles.tooltipLabel}>{poopTooltip.label}</Text>
+                        <Text style={styles.tooltipValue}>
+                          {poopTooltip.value} {poopTooltip.unit}
+                        </Text>
+                      </View>
+                    </View>
+                  )}
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                    <TouchableOpacity 
+                      activeOpacity={1}
+                      onPress={(e) => handleBarChartPress(e, poopData, '大便次数', '次')}
+                    >
+                      <BarChart
+                        data={poopData}
+                        width={getChartWidth()}
+                        height={220}
+                        chartConfig={{
+                          ...chartConfig,
+                          color: (opacity = 1) => `rgba(255, 149, 0, ${opacity})`,
+                        }}
+                        style={styles.chart}
+                        yAxisLabel=""
+                        yAxisSuffix=""
+                        fromZero
+                      />
+                    </TouchableOpacity>
+                  </ScrollView>
+                </View>
+              </View>
+            )}
           </View>
-        )}
-        
+
         <View style={styles.footer} />
       </ScrollView>
-      
-      {/* 日期选择器 */}
-      {Platform.OS === 'ios' ? (
-        <Modal
-          visible={showDatePicker}
-          transparent
-          animationType="slide"
-          onRequestClose={() => setShowDatePicker(false)}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={styles.datePickerContainer}>
-              <View style={styles.datePickerHeader}>
-                <TouchableOpacity onPress={() => setShowDatePicker(false)}>
-                  <Text style={styles.datePickerButton}>取消</Text>
-                </TouchableOpacity>
-                <Text style={styles.datePickerTitle}>
-                  {datePickerMode === 'start' ? '选择开始日期' : '选择结束日期'}
-                </Text>
-                <TouchableOpacity onPress={() => confirmDateSelection(tempDate)}>
-                  <Text style={[styles.datePickerButton, styles.datePickerConfirm]}>确定</Text>
-                </TouchableOpacity>
-              </View>
-              <DateTimePicker
-                value={tempDate}
-                mode="date"
-                display="spinner"
-                onChange={handleDateChange}
-                locale="zh-CN"
-                maximumDate={new Date()}
-              />
-            </View>
-          </View>
-        </Modal>
-      ) : (
-        showDatePicker && (
-          <DateTimePicker
-            value={tempDate}
-            mode="date"
-            display="default"
-            onChange={handleDateChange}
-            maximumDate={new Date()}
-          />
-        )
-      )}
+
+      {/* 自定义日期选择器 */}
+      <CustomDateTimePicker
+        visible={showDatePicker}
+        mode="date"
+        value={tempDate}
+        onConfirm={confirmDateSelection}
+        onCancel={() => setShowDatePicker(false)}
+        maximumDate={new Date()}
+      />
     </SafeAreaView>
   );
 };
@@ -538,72 +670,65 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: '#FFFFFF',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E5EA',
+    paddingBottom: 8,
   },
-  headerTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
+  filterContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 8,
   },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#000000',
+  filterButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 16,
+    backgroundColor: '#F5F5F7',
+    marginRight: 8,
   },
-  reportButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    backgroundColor: `${Colors.primary}10`,
+  filterButtonActive: {
+    backgroundColor: Colors.primary,
   },
-  reportButtonText: {
+  filterButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: Colors.primary,
-  },
-  timeRangeSelector: {
-    marginBottom: 12,
-  },
-  timeRangeSelectorContent: {
-    flexDirection: 'row',
-    gap: 8,
-    paddingHorizontal: 0,
-  },
-  rangeButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    backgroundColor: '#F5F5F7',
-    alignItems: 'center',
-    minWidth: 70,
-  },
-  rangeButtonActive: {
-    backgroundColor: '#007AFF',
-  },
-  rangeButtonText: {
-    fontSize: 14,
-    fontWeight: '500',
     color: '#8E8E93',
   },
-  rangeButtonTextActive: {
+  filterButtonTextActive: {
     color: '#FFFFFF',
+  },
+  customDateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+  },
+  dateButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: '#F5F5F7',
+    borderRadius: 8,
+  },
+  dateButtonText: {
+    fontSize: 14,
+    color: '#000',
+    fontWeight: '600',
+  },
+  dateSeparator: {
+    marginHorizontal: 8,
+    fontSize: 14,
+    color: '#8E8E93',
   },
   content: {
     flex: 1,
-    padding: 16,
   },
   chartCard: {
     backgroundColor: '#FFFFFF',
+    marginTop: 16,
+    marginHorizontal: 16,
     borderRadius: 16,
     padding: 16,
-    marginBottom: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -612,8 +737,8 @@ const styles = StyleSheet.create({
   },
   chartHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: 16,
   },
   chartTitleRow: {
@@ -627,89 +752,63 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   chartUnit: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#8E8E93',
   },
   chart: {
     marginVertical: 8,
     borderRadius: 16,
   },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
+  chartWrapper: {
+    position: 'relative',
+  },
+  chartTooltip: {
+    position: 'absolute',
+    top: 8,
+    left: 0,
+    right: 0,
     alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+    pointerEvents: 'none',
+  },
+  tooltipContent: {
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 3,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 8,
+    minWidth: 100,
+  },
+  tooltipLabel: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    marginBottom: 2,
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  tooltipValue: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
   emptyText: {
-    fontSize: 16,
+    textAlign: 'center',
     color: '#8E8E93',
-    marginTop: 16,
+    marginTop: 32,
+    fontSize: 16,
   },
   footer: {
     height: 32,
   },
-  customDateContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#E5E5EA',
-    gap: 12,
-  },
-  dateButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    backgroundColor: '#F5F5F7',
-    gap: 6,
-  },
-  dateButtonLabel: {
-    fontSize: 13,
-    color: '#8E8E93',
-    fontWeight: '500',
-  },
-  dateButtonText: {
-    fontSize: 13,
-    color: '#000000',
-    fontWeight: '600',
-    flex: 1,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  datePickerContainer: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingBottom: 34,
-  },
-  datePickerHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
-  },
-  datePickerTitle: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#000000',
-  },
-  datePickerButton: {
-    fontSize: 16,
-    color: '#8E8E93',
-    fontWeight: '400',
-  },
-  datePickerConfirm: {
-    color: Colors.primary,
-    fontWeight: '600',
-  },
 });
+
+export default StatsScreen;

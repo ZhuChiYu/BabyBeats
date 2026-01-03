@@ -16,7 +16,7 @@ const getApiUrl = () => {
   // 生产环境 - 使用腾讯云服务器 + 域名
   if (!__DEV__) {
     // 生产环境使用 HTTPS 域名（推荐）
-    return 'https://englishpartner.cn/babybeats/api/v1';
+    return 'https://www.englishpartner.cn/babybeats/api/v1';
     
     // 备用：直接使用 IP（如果域名未配置）
     // return 'http://111.230.110.95:4100/api/v1';
@@ -24,7 +24,7 @@ const getApiUrl = () => {
 
   // 开发环境
   // 选项1: 使用生产服务器进行开发测试（推荐，无需本地启动后端）
-  return 'https://englishpartner.cn/babybeats/api/v1';
+  return 'https://www.englishpartner.cn/babybeats/api/v1';
   
   // 选项2: 使用本地开发服务器（取消下面注释）
   /*

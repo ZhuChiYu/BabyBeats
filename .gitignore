@@ -1,7 +1,11 @@
 # ================================
-# BabyBeats 项目 .gitignore
-# 只提交最核心的后端代码
+# BabyBeats 前端项目 .gitignore
 # ================================
+
+# ================================
+# 🚫 后端目录（已分离到独立仓库）
+# ================================
+backend/
 
 # ================================
 # 🚫 Node.js 依赖
@@ -25,53 +29,24 @@ yarn-debug.log*
 **/.expo/
 
 # ================================
-# 📱 前端项目（提交源代码，忽略依赖和构建产物）
+# 📱 iOS/Android 构建产物
 # ================================
-# baby-beats-app/ # 已移除，现在提交前端源代码
-baby-beats-app/node_modules/
 baby-beats-app/ios/build/
 baby-beats-app/ios/Pods/
 baby-beats-app/android/app/build/
 baby-beats-app/.expo/
 
 # ================================
-# 📄 文档（只保留核心 README）
+# 📄 文档（排除所有 markdown 文件，只保留 README）
 # ================================
-backend/API_DOCUMENTATION.md
-backend/DEPLOYMENT_GUIDE.md
-backend/DEPLOYMENT_COMMANDS.md
-backend/ENV_TEMPLATE.md
-backend/NGINX_CONFIGURATION_GUIDE.md
-backend/QUICK_START.md
 *.md
 !README.md
-!backend/README.md
 
 # ================================
-# 🚀 部署脚本（只保留核心的）
+# 🚀 部署脚本
 # ================================
-backend/deploy.sh
-backend/deploy-tencent.sh
-backend/setup-server.sh
-backup-database.sh
-start-backend.sh
-UPLOAD_TO_SERVER.sh
-auto-start-ios.sh
-restart-ios-app.sh
-start-app-simple.sh
-test-api*.sh
-fix-*.sh
-deploy-testflight.sh
-
-# ================================
-# 📋 配置文件
-# ================================
-.dockerignore
-backend/.dockerignore
-backend/.env.template
-backend/ecosystem.config.js
-backend/fix-database-schema.sql
-backend/nginx-babybeats.conf
+*.sh
+!baby-beats-app/*.sh
 
 # ================================
 # 🔐 环境变量和密钥
@@ -123,4 +98,3 @@ coverage/
 *.jpg
 *.jpeg
 *.gif
-

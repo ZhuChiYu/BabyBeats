@@ -7,6 +7,7 @@ import { FeedingService } from '../services/feedingService';
 import { SleepService } from '../services/sleepService';
 import { DiaperService } from '../services/diaperService';
 import { PumpingService } from '../services/pumpingService';
+import { SwipeableRow } from '../components/SwipeableRow';
 import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 
@@ -177,7 +178,12 @@ export const LogScreen: React.FC<LogScreenProps> = ({ navigation }) => {
           pee: '小便',
           both: '大小便',
         };
-        return types[diaper.type as keyof typeof types] || '尿布';
+        let title = types[diaper.type as keyof typeof types] || '尿布';
+        // 如果是小便或都有，且有尿量数据，显示尿量
+        if ((diaper.type === 'pee' || diaper.type === 'both') && diaper.urineAmount) {
+          title += ` ${diaper.urineAmount.toFixed(1)}g`;
+        }
+        return title;
       case 'pumping':
         const pumping = record.data;
         return `挤奶 ${pumping.totalAmount}ml`;
@@ -188,6 +194,11 @@ export const LogScreen: React.FC<LogScreenProps> = ({ navigation }) => {
   
   const formatTime = (timestamp: number) => {
     return format(new Date(timestamp), 'HH:mm', { locale: zhCN });
+  };
+  
+  const handleQuickAdd = () => {
+    // 直接导航到快速添加页面，使用当前日期
+    navigation.navigate('QuickAddRecord', { initialDate: new Date().getTime() });
   };
   
   const formatDate = (timestamp: number) => {
@@ -231,6 +242,17 @@ export const LogScreen: React.FC<LogScreenProps> = ({ navigation }) => {
   
   return (
     <SafeAreaView style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>记录</Text>
+        <TouchableOpacity
+          style={styles.addButton}
+          onPress={handleQuickAdd}
+        >
+          <Ionicons name="add-circle" size={32} color="#007AFF" />
+        </TouchableOpacity>
+      </View>
+
       {/* 筛选器 */}
       <View style={styles.filterContainer}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -278,28 +300,29 @@ export const LogScreen: React.FC<LogScreenProps> = ({ navigation }) => {
           Object.keys(groupedRecords).map(dateKey => (
             <View key={dateKey} style={styles.dateSection}>
               <Text style={styles.dateHeader}>{dateKey}</Text>
-              {groupedRecords[dateKey].map(record => {
+              {groupedRecords[dateKey].map((record, index) => {
                 const icon = getRecordIcon(record.type);
+                const isLast = index === groupedRecords[dateKey].length - 1;
                 return (
-                  <View key={record.id} style={styles.recordCard}>
-                    <TouchableOpacity 
-                      style={styles.recordLeft}
-                      onPress={() => handleEdit(record)}
+                  <View key={record.id}>
+                    <SwipeableRow
+                      onDelete={() => handleDelete(record)}
                     >
-                      <View style={[styles.iconContainer, { backgroundColor: `${icon.color}15` }]}>
-                        <Ionicons name={icon.name as any} size={20} color={icon.color} />
-                      </View>
-                      <View style={styles.recordInfo}>
-                        <Text style={styles.recordTitle}>{getRecordTitle(record)}</Text>
-                        <Text style={styles.recordTime}>{formatTime(record.time)}</Text>
-                      </View>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.deleteButton}
-                      onPress={() => handleDelete(record)}
-                    >
-                      <Ionicons name="trash-outline" size={20} color="#FF3B30" />
-                    </TouchableOpacity>
+                      <TouchableOpacity 
+                        style={styles.recordCard}
+                        onPress={() => handleEdit(record)}
+                        activeOpacity={0.7}
+                      >
+                        <View style={[styles.iconContainer, { backgroundColor: `${icon.color}15` }]}>
+                          <Ionicons name={icon.name as any} size={20} color={icon.color} />
+                        </View>
+                        <View style={styles.recordInfo}>
+                          <Text style={styles.recordTitle}>{getRecordTitle(record)}</Text>
+                          <Text style={styles.recordTime}>{formatTime(record.time)}</Text>
+                        </View>
+                      </TouchableOpacity>
+                    </SwipeableRow>
+                    {!isLast && <View style={styles.recordDivider} />}
                   </View>
                 );
               })}
@@ -316,6 +339,24 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F5F5F7',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5EA',
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#000000',
+  },
+  addButton: {
+    padding: 0,
   },
   filterContainer: {
     backgroundColor: '#FFFFFF',
@@ -357,24 +398,16 @@ const styles = StyleSheet.create({
   },
   recordCard: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    marginHorizontal: 16,
-    marginBottom: 8,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
   },
-  recordLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
+  recordDivider: {
+    height: 1,
+    backgroundColor: '#F5F5F7',
+    marginLeft: 68,
+    marginRight: 16,
   },
   iconContainer: {
     width: 40,
@@ -396,9 +429,6 @@ const styles = StyleSheet.create({
   recordTime: {
     fontSize: 14,
     color: '#8E8E93',
-  },
-  deleteButton: {
-    padding: 8,
   },
   emptyContainer: {
     flex: 1,

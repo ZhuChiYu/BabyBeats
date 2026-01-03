@@ -14,7 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useBabyStore } from '../store/babyStore';
 import { TemperatureService } from '../services/temperatureService';
 import { ModalHeader } from '../components/ModalHeader';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import { CustomDateTimePicker } from '../components/CustomDateTimePicker';
 import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 
@@ -202,20 +202,17 @@ export const AddTemperatureScreen: React.FC<AddTemperatureScreenProps> = ({ navi
 
       </KeyboardAvoidingView>
 
-      {showDatePicker && (
-        <DateTimePicker
+      <CustomDateTimePicker
+        visible={showDatePicker}
+        mode="datetime"
           value={date}
-          mode="datetime"
-          display="spinner"
-          locale="zh-Hans-CN"
-          onChange={(event, selectedDate) => {
+        onConfirm={(date) => {
+          setDate(date);
             setShowDatePicker(false);
-            if (selectedDate) {
-              setDate(selectedDate);
-            }
           }}
+        onCancel={() => setShowDatePicker(false)}
+        maximumDate={new Date()}
         />
-      )}
     </SafeAreaView>
   );
 };

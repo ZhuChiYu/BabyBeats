@@ -1,6 +1,7 @@
 import { getDatabase, generateId, getCurrentTimestamp } from '../database';
 import { Vaccine } from '../types';
 import { NotificationService } from './notificationService';
+import { validateAndFixBabyId } from '../utils/babyValidation';
 
 export class VaccineService {
   /**
@@ -21,6 +22,9 @@ export class VaccineService {
     const id = generateId();
     const now = getCurrentTimestamp();
     
+    // 验证并修正 baby_id
+    const validBabyId = await validateAndFixBabyId(data.babyId);
+    
     await db.runAsync(
       `INSERT INTO vaccines (
         id, baby_id, vaccine_name, vaccination_date, dose_number,
@@ -29,7 +33,7 @@ export class VaccineService {
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
-        data.babyId,
+        validBabyId,
         data.vaccineName,
         data.vaccinationDate,
         data.doseNumber || null,
@@ -45,7 +49,7 @@ export class VaccineService {
     
     const vaccine: Vaccine = {
       id,
-      babyId: data.babyId,
+      babyId: validBabyId,
       vaccineName: data.vaccineName,
       vaccinationDate: data.vaccinationDate,
       doseNumber: data.doseNumber,
@@ -264,21 +268,36 @@ export class VaccineService {
     description: string;
   }> {
     return [
+      // 免疫规划（免费）疫苗
       { name: '卡介苗', ageMonths: [0], description: '预防结核病' },
-      { name: '乙肝疫苗', ageMonths: [0, 1, 6], description: '预防乙型肝炎' },
-      { name: '脊灰疫苗', ageMonths: [2, 3, 4, 18], description: '预防脊髓灰质炎' },
-      { name: '百白破疫苗', ageMonths: [3, 4, 5, 18], description: '预防百日咳、白喉、破伤风' },
-      { name: 'A群流脑疫苗', ageMonths: [6, 9], description: '预防流行性脑脊髓膜炎' },
-      { name: '麻腮风疫苗', ageMonths: [8, 18], description: '预防麻疹、腮腺炎、风疹' },
-      { name: '乙脑疫苗', ageMonths: [8, 24], description: '预防流行性乙型脑炎' },
-      { name: 'A+C群流脑疫苗', ageMonths: [24, 36], description: '预防流行性脑脊髓膜炎' },
-      { name: '甲肝疫苗', ageMonths: [18, 24], description: '预防甲型肝炎' },
-      { name: '水痘疫苗', ageMonths: [12, 48], description: '预防水痘（自费）' },
-      { name: '手足口疫苗', ageMonths: [6, 12], description: '预防手足口病（自费）' },
-      { name: '流感疫苗', ageMonths: [6], description: '预防流感（自费，每年接种）' },
-      { name: 'HIB疫苗', ageMonths: [2, 4, 6, 12], description: '预防B型流感嗜血杆菌（自费）' },
-      { name: '肺炎疫苗', ageMonths: [2, 4, 6, 12], description: '预防肺炎（自费）' },
-      { name: '轮状病毒疫苗', ageMonths: [2, 4, 6], description: '预防轮状病毒（自费）' },
+      { name: '乙肝', ageMonths: [0, 1, 6], description: '预防乙型肝炎' },
+      { name: '百白破', ageMonths: [2, 4, 6, 18, 72], description: '预防百日咳、白喉、破伤风' },
+      { name: '灭活脊灰', ageMonths: [2, 3], description: '预防脊髓灰质炎（IPV）' },
+      { name: '口服脊灰', ageMonths: [4, 48], description: '预防脊髓灰质炎（OPV）' },
+      { name: '麻腮风', ageMonths: [8, 18], description: '预防麻疹、腮腺炎、风疹' },
+      { name: '乙脑', ageMonths: [8, 24], description: '预防流行性乙型脑炎' },
+      { name: '流脑A群', ageMonths: [6, 9], description: '预防流行性脑脊髓膜炎A群' },
+      { name: '流脑A+C多糖', ageMonths: [36, 72], description: '预防流行性脑脊髓膜炎A+C群' },
+      { name: '甲肝减毒', ageMonths: [18], description: '预防甲型肝炎（减毒活疫苗）' },
+      { name: '水痘', ageMonths: [12, 48], description: '预防水痘' },
+      
+      // 非免疫规划（自费）疫苗
+      { name: '五联', ageMonths: [2, 3, 4, 18], description: '五联疫苗（替代百白破+灭活脊灰+Hib）' },
+      { name: '13价肺炎链球菌', ageMonths: [2.5, 3, 4.5, 12], description: '预防肺炎链球菌感染' },
+      { name: '23价肺炎链球菌', ageMonths: [24], description: '预防肺炎链球菌感染（23价）' },
+      { name: 'Hib', ageMonths: [2.5, 3.5, 4.5, 12, 18], description: '预防B型流感嗜血杆菌' },
+      { name: '口服五价轮状', ageMonths: [1.5, 2.5, 3.5], description: '预防轮状病毒（五价）' },
+      { name: '单价轮状', ageMonths: [3, 24], description: '预防轮状病毒（单价）' },
+      { name: 'EV71', ageMonths: [7.5, 8], description: '预防手足口病（EV71型）' },
+      { name: '流脑AC结合', ageMonths: [3.5, 4, 5], description: '预防流行性脑脊髓膜炎AC群（结合疫苗）' },
+      { name: '流脑ACYW135', ageMonths: [3.5, 6, 36, 72], description: '预防流行性脑脊髓膜炎ACYW135群' },
+      { name: '甲肝灭活', ageMonths: [18, 30], description: '预防甲型肝炎（灭活疫苗）' },
+      { name: '自费灭活脊灰', ageMonths: [4], description: '预防脊髓灰质炎（全程灭活方案）' },
+      { name: '二价hpv', ageMonths: [5], description: 'HPV疫苗（二价）' },
+      { name: '四价hpv', ageMonths: [5], description: 'HPV疫苗（四价）' },
+      { name: '九价hpv', ageMonths: [6, 108, 192], description: 'HPV疫苗（九价）' },
+      { name: '带状疱疹疫苗', ageMonths: [600], description: '预防带状疱疹（50岁以上）' },
+      { name: '流感疫苗', ageMonths: [6], description: '预防流感（每年接种）' },
     ];
   }
 }

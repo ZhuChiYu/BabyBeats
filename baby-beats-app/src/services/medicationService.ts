@@ -1,6 +1,7 @@
 import { getDatabase, generateId, getCurrentTimestamp } from '../database';
 import { Medication } from '../types';
 import { NotificationService } from './notificationService';
+import { validateAndFixBabyId } from '../utils/babyValidation';
 
 export class MedicationService {
   /**
@@ -21,6 +22,9 @@ export class MedicationService {
     const db = await getDatabase();
     const id = generateId();
     const now = getCurrentTimestamp();
+    
+    // 验证并修正 baby_id
+    const validBabyId = await validateAndFixBabyId(data.babyId);
 
     await db.runAsync(
       `INSERT INTO medications (
@@ -30,7 +34,7 @@ export class MedicationService {
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
-        data.babyId,
+        validBabyId,
         data.medicationTime,
         data.medicationName,
         data.dosage,
@@ -47,7 +51,7 @@ export class MedicationService {
 
     const medication: Medication = {
       id,
-      babyId: data.babyId,
+      babyId: validBabyId,
       medicationTime: data.medicationTime,
       medicationName: data.medicationName,
       dosage: data.dosage,

@@ -138,6 +138,12 @@ export const GrowthScreen: React.FC<GrowthScreenProps> = ({ navigation }) => {
   const babyAge = formatAge(currentBaby.birthday);
   const latestAssessment = getLatestAssessment();
   
+  // 计算宝宝月龄（用于尿量标准）
+  const babyAgeInMonths = Math.floor((Date.now() - currentBaby.birthday) / (30 * 24 * 60 * 60 * 1000));
+  
+  // 获取最新体重（用于尿量标准）
+  const latestWeight = records.length > 0 ? records[0].weight : undefined;
+  
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>

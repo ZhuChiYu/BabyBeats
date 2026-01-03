@@ -27,6 +27,12 @@ export interface LoginData {
   password: string;
 }
 
+export interface AppleLoginData {
+  appleId: string;
+  email?: string;
+  fullName?: string;
+}
+
 export const AuthApiService = {
   // 注册
   register: async (data: RegisterData): Promise<LoginResponse> => {
@@ -38,6 +44,13 @@ export const AuthApiService = {
   // 登录
   login: async (data: LoginData): Promise<LoginResponse> => {
     const response = await api.post<LoginResponse>('/auth/login', data);
+    await AuthApiService.saveAuth(response);
+    return response;
+  },
+
+  // Apple 登录
+  appleLogin: async (data: AppleLoginData): Promise<LoginResponse> => {
+    const response = await api.post<LoginResponse>('/auth/apple-login', data);
     await AuthApiService.saveAuth(response);
     return response;
   },

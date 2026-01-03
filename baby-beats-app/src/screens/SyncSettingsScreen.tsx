@@ -10,9 +10,11 @@ import {
   Alert,
   ActivityIndicator,
   Switch,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import { Colors } from '../constants';
 import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
@@ -47,6 +49,7 @@ export const SyncSettingsScreen: React.FC<SyncSettingsScreenProps> = ({ navigati
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [appleAuthAvailable, setAppleAuthAvailable] = useState(false);
   const [syncConfig, setSyncConfig] = useState<SyncConfig>({
     email: '',
     deviceId: '',
@@ -58,7 +61,15 @@ export const SyncSettingsScreen: React.FC<SyncSettingsScreenProps> = ({ navigati
   useEffect(() => {
     loadSyncConfig();
     loadAuthToken();
+    checkAppleAuthAvailability();
   }, []);
+
+  const checkAppleAuthAvailability = async () => {
+    if (Platform.OS === 'ios') {
+      const available = await AppleAuthentication.isAvailableAsync();
+      setAppleAuthAvailable(available);
+    }
+  };
 
   const loadAuthToken = async () => {
     try {
@@ -271,6 +282,89 @@ export const SyncSettingsScreen: React.FC<SyncSettingsScreenProps> = ({ navigati
     }
   };
 
+  const handleAppleSignIn = async () => {
+    try {
+      setLoading(true);
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
+
+      // credential.user 是唯一的 Apple ID
+      // credential.email 可能为空（用户选择隐藏邮箱）
+      // credential.fullName 包含用户姓名
+
+      console.log('Apple Sign In Success:', {
+        user: credential.user,
+        email: credential.email,
+        fullName: credential.fullName,
+      });
+
+      // 使用 Apple ID 作为用户标识登录或注册
+      const response = await api.post<{ token: string; user: any }>('/auth/apple-login', {
+        appleId: credential.user,
+        email: credential.email || `${credential.user}@privaterelay.appleid.com`,
+        fullName: credential.fullName 
+          ? `${credential.fullName.givenName || ''} ${credential.fullName.familyName || ''}`.trim()
+          : '用户',
+      });
+
+      // 保存认证信息
+      await AsyncStorage.setItem('authToken', response.token);
+      await AsyncStorage.setItem('userEmail', credential.email || credential.user);
+      await AsyncStorage.setItem('appleUserId', credential.user);
+      
+      // 设置 API 客户端的认证 token
+      setAuthToken(response.token);
+
+      // 更新同步配置
+      await saveSyncConfig({
+        email: credential.email || credential.user,
+        isLoggedIn: true,
+        deviceId: response.user.id || 'device-' + Date.now(),
+      });
+
+      // 重新加载同步管理器配置
+      await syncManager.reloadConfig();
+
+      // 登录成功后自动同步数据
+      Alert.alert(
+        '登录成功',
+        '已通过 Apple ID 登录。是否立即同步数据？',
+        [
+          { text: '稍后', style: 'cancel' },
+          {
+            text: '同步',
+            onPress: async () => {
+              try {
+                setSyncing(true);
+                await syncManager.pushToServer();
+                await syncManager.pullFromServer();
+                Alert.alert('成功', '数据同步完成！');
+              } catch (error) {
+                console.error('Auto sync failed:', error);
+                Alert.alert('提示', '自动同步失败，可以稍后手动同步');
+              } finally {
+                setSyncing(false);
+              }
+            },
+          },
+        ]
+      );
+    } catch (error: any) {
+      console.error('Apple Sign In error:', error);
+      if (error.code === 'ERR_CANCELED') {
+        // 用户取消登录
+        return;
+      }
+      Alert.alert('错误', '使用 Apple 登录失败，请重试');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleLogout = async () => {
     Alert.alert(
       '退出登录',
@@ -283,6 +377,7 @@ export const SyncSettingsScreen: React.FC<SyncSettingsScreenProps> = ({ navigati
           onPress: async () => {
             await AsyncStorage.removeItem('authToken');
             await AsyncStorage.removeItem('userEmail');
+            await AsyncStorage.removeItem('appleUserId');
             
             // 清除 API 客户端的认证 token
             setAuthToken(null);
@@ -415,6 +510,25 @@ export const SyncSettingsScreen: React.FC<SyncSettingsScreenProps> = ({ navigati
             </>
           ) : (
             <>
+              {/* Apple Sign In Button */}
+              {appleAuthAvailable && (
+                <>
+                  <AppleAuthentication.AppleAuthenticationButton
+                    buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+                    buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+                    cornerRadius={12}
+                    style={styles.appleButton}
+                    onPress={handleAppleSignIn}
+                  />
+                  
+                  <View style={styles.divider}>
+                    <View style={styles.dividerLine} />
+                    <Text style={styles.dividerText}>或使用邮箱登录</Text>
+                    <View style={styles.dividerLine} />
+                  </View>
+                </>
+              )}
+
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>邮箱</Text>
                 <TextInput
@@ -537,7 +651,10 @@ export const SyncSettingsScreen: React.FC<SyncSettingsScreenProps> = ({ navigati
         <View style={styles.infoCard}>
           <Ionicons name="information-circle-outline" size={20} color={Colors.primary} />
           <Text style={styles.infoText}>
-            数据同步功能可以让您在多个设备间共享宝宝的记录。请使用邮箱和密码登录或注册账号，然后点击"立即同步"开始同步数据。
+            {appleAuthAvailable 
+              ? '推荐使用 Apple ID 登录，相同 Apple ID 的设备可以自动同步数据。您也可以使用邮箱和密码登录或注册账号。'
+              : '数据同步功能可以让您在多个设备间共享宝宝的记录。请使用邮箱和密码登录或注册账号，然后点击"立即同步"开始同步数据。'
+            }
           </Text>
         </View>
 
@@ -731,6 +848,26 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#8E8E93',
     lineHeight: 20,
+  },
+  appleButton: {
+    width: '100%',
+    height: 50,
+    marginBottom: 16,
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#E5E5EA',
+  },
+  dividerText: {
+    fontSize: 14,
+    color: '#8E8E93',
+    marginHorizontal: 12,
   },
 });
 

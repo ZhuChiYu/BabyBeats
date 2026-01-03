@@ -1,5 +1,6 @@
 import { getDatabase, generateId, getCurrentTimestamp } from '../database';
 import { Milestone } from '../types';
+import { validateAndFixBabyId } from '../utils/babyValidation';
 
 export class MilestoneService {
   /**
@@ -16,6 +17,9 @@ export class MilestoneService {
     const db = await getDatabase();
     const id = generateId();
     const now = getCurrentTimestamp();
+    
+    // 验证并修正 baby_id
+    const validBabyId = await validateAndFixBabyId(data.babyId);
 
     await db.runAsync(
       `INSERT INTO milestones (
@@ -24,7 +28,7 @@ export class MilestoneService {
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
-        data.babyId,
+        validBabyId,
         data.time,
         data.milestoneType,
         data.title,
@@ -37,7 +41,7 @@ export class MilestoneService {
 
     return {
       id,
-      babyId: data.babyId,
+      babyId: validBabyId,
       time: data.time,
       milestoneType: data.milestoneType,
       title: data.title,

@@ -52,16 +52,29 @@ export const formatFriendlyDate = (timestamp: number): string => {
  */
 export const calculateAge = (birthday: number): { years: number; months: number; days: number } => {
   const now = new Date();
-  const birth = new Date(birthday);
+  const birthDate = new Date(birthday);
   
-  const years = differenceInYears(now, birth);
-  const months = differenceInMonths(now, birth) % 12;
+  // 计算总天数
+  const totalDays = Math.floor((now.getTime() - birthDate.getTime()) / (1000 * 60 * 60 * 24));
   
-  // 计算剩余天数
-  const lastBirthdayMonth = new Date(birth);
-  lastBirthdayMonth.setFullYear(now.getFullYear());
-  lastBirthdayMonth.setMonth(birth.getMonth() + differenceInMonths(now, birth));
-  const days = differenceInDays(now, lastBirthdayMonth);
+  if (totalDays < 0) return { years: 0, months: 0, days: 0 };
+  
+  // 计算年、月、天
+  let years = now.getFullYear() - birthDate.getFullYear();
+  let months = now.getMonth() - birthDate.getMonth();
+  let days = now.getDate() - birthDate.getDate();
+  
+  // 调整月份和年份
+  if (days < 0) {
+    months--;
+    const lastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+    days += lastMonth.getDate();
+  }
+  
+  if (months < 0) {
+    years--;
+    months += 12;
+  }
   
   return { years, months, days };
 };
@@ -72,13 +85,24 @@ export const calculateAge = (birthday: number): { years: number; months: number;
 export const formatAge = (birthday: number): string => {
   const { years, months, days } = calculateAge(birthday);
   
-  if (years > 0) {
+  // 超过1年：显示年月
+  if (years >= 1) {
+    if (months === 0) {
+      return `${years}岁`;
+    }
     return `${years}岁${months}个月`;
-  } else if (months > 0) {
-    return `${months}个月${days}天`;
-  } else {
-    return `${days}天`;
   }
+  
+  // 超过1个月但不到1年：显示月天
+  if (months >= 1) {
+    if (days === 0) {
+      return `${months}个月`;
+    }
+    return `${months}个月${days}天`;
+  }
+  
+  // 不到1个月：只显示天数
+  return `${days}天`;
 };
 
 /**

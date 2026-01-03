@@ -11,7 +11,7 @@ import {View,
   KeyboardAvoidingView,
   Platform
 } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import { CustomDateTimePicker } from '../components/CustomDateTimePicker';
 import { Ionicons } from '@expo/vector-icons';
 import { FeedingService } from '../services/feedingService';
 import { ModalHeader } from '../components/ModalHeader';
@@ -204,19 +204,17 @@ export const EditFeedingScreen: React.FC<EditFeedingScreenProps> = ({ navigation
             </Text>
           </TouchableOpacity>
           
-          {showTimePicker && (
-            <DateTimePicker
+          <CustomDateTimePicker
+            visible={showTimePicker}
+            mode="datetime"
               value={time}
-              mode="datetime"
-              display="spinner"
-              onChange={(event, selectedDate) => {
+            onConfirm={(date) => {
+              setTime(date);
                 setShowTimePicker(false);
-                if (selectedDate) {
-                  setTime(selectedDate);
-                }
               }}
+            onCancel={() => setShowTimePicker(false)}
+            maximumDate={new Date()}
             />
-          )}
         </View>
         
         {/* 数据输入 */}

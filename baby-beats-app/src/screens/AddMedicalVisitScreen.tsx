@@ -14,7 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useBabyStore } from '../store/babyStore';
 import { MedicalVisitService } from '../services/medicalVisitService';
 import { ModalHeader } from '../components/ModalHeader';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import { CustomDateTimePicker } from '../components/CustomDateTimePicker';
 import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 
@@ -334,20 +334,17 @@ export const AddMedicalVisitScreen: React.FC<AddMedicalVisitScreenProps> = ({ na
 
       </KeyboardAvoidingView>
 
-      {showDatePicker && (
-        <DateTimePicker
+      <CustomDateTimePicker
+        visible={showDatePicker}
+        mode="datetime"
           value={visitTime}
-          mode="datetime"
-          display="spinner"
-          locale="zh-Hans-CN"
-          onChange={(event, selectedDate) => {
+        onConfirm={(date) => {
+          setVisitTime(date);
             setShowDatePicker(false);
-            if (selectedDate) {
-              setVisitTime(selectedDate);
-            }
           }}
+        onCancel={() => setShowDatePicker(false)}
+        maximumDate={new Date()}
         />
-      )}
     </SafeAreaView>
   );
 };

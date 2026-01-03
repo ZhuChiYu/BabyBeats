@@ -14,7 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useBabyStore } from '../store/babyStore';
 import { MedicationService } from '../services/medicationService';
 import { ModalHeader } from '../components/ModalHeader';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import { CustomDateTimePicker } from '../components/CustomDateTimePicker';
 import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import { Medication } from '../types';
@@ -358,50 +358,40 @@ export const AddMedicationScreen: React.FC<AddMedicationScreenProps> = ({ naviga
 
       </KeyboardAvoidingView>
 
-      {showDatePicker && (
-        <DateTimePicker
+      <CustomDateTimePicker
+        visible={showDatePicker}
+        mode="datetime"
           value={medicationTime}
-          mode="datetime"
-          display="spinner"
-          locale="zh-Hans-CN"
-          onChange={(event, selectedDate) => {
+        onConfirm={(date) => {
+          setMedicationTime(date);
             setShowDatePicker(false);
-            if (selectedDate) {
-              setMedicationTime(selectedDate);
-            }
           }}
+        onCancel={() => setShowDatePicker(false)}
+        maximumDate={new Date()}
         />
-      )}
 
-      {showStartDatePicker && (
-        <DateTimePicker
+      <CustomDateTimePicker
+        visible={showStartDatePicker}
+        mode="date"
           value={startDate}
-          mode="date"
-          display="spinner"
-          locale="zh-Hans-CN"
-          onChange={(event, selectedDate) => {
+        onConfirm={(date) => {
+          setStartDate(date);
             setShowStartDatePicker(false);
-            if (selectedDate) {
-              setStartDate(selectedDate);
-            }
           }}
+        onCancel={() => setShowStartDatePicker(false)}
         />
-      )}
 
-      {showEndDatePicker && (
-        <DateTimePicker
+      <CustomDateTimePicker
+        visible={showEndDatePicker}
+        mode="date"
           value={endDate || new Date()}
-          mode="date"
-          display="spinner"
-          locale="zh-Hans-CN"
-          onChange={(event, selectedDate) => {
+        onConfirm={(date) => {
+          setEndDate(date);
             setShowEndDatePicker(false);
-            if (selectedDate) {
-              setEndDate(selectedDate);
-            }
           }}
+        onCancel={() => setShowEndDatePicker(false)}
+        minimumDate={startDate}
         />
-      )}
     </SafeAreaView>
   );
 };

@@ -1,5 +1,6 @@
 import { Pumping } from '../types';
 import { getDatabase, generateId, getCurrentTimestamp } from '../database';
+import { validateAndFixBabyId } from '../utils/babyValidation';
 
 export class PumpingService {
   // 创建挤奶记录
@@ -7,11 +8,15 @@ export class PumpingService {
     const db = await getDatabase();
     const now = getCurrentTimestamp();
     
+    // 验证并修正 baby_id
+    const validBabyId = await validateAndFixBabyId(data.babyId);
+    
     // 自动计算总量
     const totalAmount = data.leftAmount + data.rightAmount;
     
     const pumping: Pumping = {
       ...data,
+      babyId: validBabyId,
       totalAmount,
       id: generateId(),
       createdAt: now,

@@ -1,5 +1,6 @@
 import { getDatabase, generateId, getCurrentTimestamp } from '../database';
 import { GrowthRecord } from '../types';
+import { validateAndFixBabyId } from '../utils/babyValidation';
 
 export interface TemperatureRecord {
   id: string;
@@ -27,17 +28,20 @@ export class TemperatureService {
     const db = await getDatabase();
     const id = generateId();
     const now = getCurrentTimestamp();
+    
+    // 验证并修正 baby_id
+    const validBabyId = await validateAndFixBabyId(data.babyId);
 
     await db.runAsync(
       `INSERT INTO growth_records (
         id, baby_id, date, temperature, notes, created_at, updated_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [id, data.babyId, data.date, data.temperature, data.notes || null, now, now]
+      [id, validBabyId, data.date, data.temperature, data.notes || null, now, now]
     );
 
     return {
       id,
-      babyId: data.babyId,
+      babyId: validBabyId,
       date: data.date,
       temperature: data.temperature,
       measurementMethod: data.measurementMethod as any,

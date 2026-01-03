@@ -13,9 +13,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useBabyStore } from '../store/babyStore';
 import { VaccineService } from '../services/vaccineService';
 import { Vaccine } from '../types';
-import { format } from 'date-fns';
+import { format, differenceInDays } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import { useFocusEffect } from '@react-navigation/native';
+import { VACCINE_SCHEDULE, VaccineInfo, VaccineSchedulePoint } from '../constants/vaccineSchedule';
 
 interface VaccineListScreenProps {
   navigation: any;
@@ -27,6 +28,7 @@ export const VaccineListScreen: React.FC<VaccineListScreenProps> = ({ navigation
 
   const [vaccines, setVaccines] = useState<Vaccine[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [expandedSections, setExpandedSections] = useState<Set<number>>(new Set([0, 1, 2, 3])); // 默认展开前几个
 
   useEffect(() => {
     if (currentBaby) {
@@ -60,7 +62,60 @@ export const VaccineListScreen: React.FC<VaccineListScreenProps> = ({ navigation
     loadVaccines();
   };
 
-  const handleDelete = (vaccine: Vaccine) => {
+  const toggleSection = (index: number) => {
+    const newExpanded = new Set(expandedSections);
+    if (newExpanded.has(index)) {
+      newExpanded.delete(index);
+    } else {
+      newExpanded.add(index);
+    }
+    setExpandedSections(newExpanded);
+  };
+
+  const isVaccineCompleted = (vaccineName: string, dose: number): boolean => {
+    return vaccines.some(
+      v => v.vaccineName === vaccineName && v.doseNumber === dose
+    );
+  };
+
+  const getVaccineRecord = (vaccineName: string, dose: number): Vaccine | undefined => {
+    return vaccines.find(
+      v => v.vaccineName === vaccineName && v.doseNumber === dose
+    );
+  };
+
+  // 检查疫苗是否被其他疫苗替代了
+  const isVaccineReplaced = (vaccine: VaccineInfo): boolean => {
+    if (!vaccine.replacedBy || vaccine.replacedBy.length === 0) return false;
+    
+    // 检查是否有任何替代疫苗已接种
+    return vaccine.replacedBy.some(replacerName => {
+      // 检查所有剂次，只要有一针就算替代
+      return vaccines.some(v => v.vaccineName === replacerName);
+    });
+  };
+
+  const getBabyAgeInMonths = (): number => {
+    if (!currentBaby) return 0;
+    const days = differenceInDays(new Date(), currentBaby.birthDate);
+    return days / 30;
+  };
+
+  const shouldHighlight = (schedule: VaccineSchedulePoint): boolean => {
+    const babyAge = getBabyAgeInMonths();
+    const scheduleAge = schedule.ageDays ? schedule.ageDays / 30 : schedule.ageMonths;
+    // 高亮当前年龄前后1个月的接种点
+    return Math.abs(scheduleAge - babyAge) <= 1;
+  };
+
+  const handleAddVaccine = (vaccineName: string, dose: number) => {
+    navigation.navigate('AddVaccine', {
+      defaultVaccineName: vaccineName,
+      defaultDoseNumber: dose,
+    });
+  };
+
+  const handleDeleteVaccine = (vaccine: Vaccine) => {
     Alert.alert('确认删除', '确定要删除这条疫苗记录吗？', [
       { text: '取消', style: 'cancel' },
       {
@@ -76,6 +131,177 @@ export const VaccineListScreen: React.FC<VaccineListScreenProps> = ({ navigation
         },
       },
     ]);
+  };
+
+  const renderVaccineItem = (vaccine: VaccineInfo, schedule: VaccineSchedulePoint) => {
+    const isCompleted = isVaccineCompleted(vaccine.name, vaccine.doses);
+    const record = getVaccineRecord(vaccine.name, vaccine.doses);
+    const isReplaced = isVaccineReplaced(vaccine);
+
+    return (
+      <TouchableOpacity
+        key={`${vaccine.name}-${vaccine.doses}`}
+        style={[
+          styles.vaccineItem,
+          isCompleted && styles.vaccineItemCompleted,
+          isReplaced && styles.vaccineItemReplaced,
+        ]}
+        onPress={() => {
+          if (isReplaced) {
+            // 被替代的疫苗，不允许点击
+            return;
+          }
+          if (isCompleted && record) {
+            handleDeleteVaccine(record);
+          } else {
+            handleAddVaccine(vaccine.name, vaccine.doses);
+          }
+        }}
+        activeOpacity={isReplaced ? 1 : 0.7}
+        disabled={isReplaced}
+      >
+        <View style={styles.vaccineLeft}>
+          <View style={[
+            styles.checkbox,
+            isCompleted && styles.checkboxChecked,
+            isReplaced && styles.checkboxReplaced,
+          ]}>
+            {isCompleted ? (
+              <Ionicons name="checkmark" size={16} color="#FFFFFF" />
+            ) : isReplaced ? (
+              <Text style={styles.replacedIcon}>≈</Text>
+            ) : null}
+          </View>
+          <View style={styles.vaccineInfo}>
+            <Text style={[
+              styles.vaccineName,
+              isCompleted && styles.vaccineNameCompleted,
+              isReplaced && styles.vaccineNameReplaced,
+            ]}>
+              {vaccine.name}
+              {vaccine.doses > 0 && (
+                <Text style={styles.doseNumber}>
+                  {'①②③④⑤⑥⑦⑧⑨⑩'.charAt(vaccine.doses - 1)}
+                </Text>
+              )}
+            </Text>
+            {isReplaced && (
+              <Text style={styles.replacedNote}>
+                ⚡ 已被 {vaccine.replacedBy?.join('、')} 替代
+              </Text>
+            )}
+            {vaccine.note && !isReplaced && (
+              <Text style={styles.vaccineNote}>{vaccine.note}</Text>
+            )}
+            {vaccine.alternativeTo && !isReplaced && (
+              <Text style={styles.vaccineAlternative}>💡 {vaccine.alternativeTo}</Text>
+            )}
+            {isCompleted && record && (
+              <Text style={styles.vaccineDate}>
+                ✓ {format(new Date(record.vaccinationDate), 'MM月dd日', { locale: zhCN })}
+                {record.location && ` · ${record.location}`}
+              </Text>
+            )}
+          </View>
+        </View>
+        <View style={styles.vaccineRight}>
+          {!isReplaced && !vaccine.isFree && vaccine.price && (
+            <Text style={styles.priceTag}>¥{vaccine.price}</Text>
+          )}
+          {!isReplaced && (
+            <Ionicons 
+              name={isCompleted ? "trash-outline" : "add-circle"} 
+              size={20} 
+              color={isCompleted ? "#FF3B30" : "#007AFF"} 
+            />
+          )}
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  const renderScheduleSection = (schedule: VaccineSchedulePoint, index: number) => {
+    const isExpanded = expandedSections.has(index);
+    const isHighlighted = shouldHighlight(schedule);
+    const freeCompleted = schedule.freeVaccines.filter(v => isVaccineCompleted(v.name, v.doses)).length;
+    const paidCompleted = schedule.paidVaccines.filter(v => isVaccineCompleted(v.name, v.doses)).length;
+    const totalVaccines = schedule.freeVaccines.length + schedule.paidVaccines.length;
+    const totalCompleted = freeCompleted + paidCompleted;
+
+    return (
+      <View key={index} style={[
+        styles.scheduleSection,
+        isHighlighted && styles.scheduleSectionHighlighted,
+      ]}>
+        <TouchableOpacity
+          style={styles.scheduleSectionHeader}
+          onPress={() => toggleSection(index)}
+          activeOpacity={0.7}
+        >
+          <View style={styles.scheduleHeaderLeft}>
+            <View style={[
+              styles.ageCircle,
+              isHighlighted && styles.ageCircleHighlighted,
+            ]}>
+              <Ionicons 
+                name={schedule.isCheckup ? "calendar" : "time"} 
+                size={20} 
+                color={isHighlighted ? "#FFFFFF" : "#007AFF"} 
+              />
+            </View>
+            <View>
+              <Text style={[
+                styles.ageLabel,
+                isHighlighted && styles.ageLabelHighlighted,
+              ]}>
+                {schedule.ageLabel}
+                {schedule.isCheckup && <Text style={styles.checkupBadge}> 体检</Text>}
+              </Text>
+              <Text style={styles.completionText}>
+                {totalCompleted}/{totalVaccines} 已完成
+              </Text>
+            </View>
+          </View>
+          <Ionicons 
+            name={isExpanded ? "chevron-up" : "chevron-down"} 
+            size={24} 
+            color="#8E8E93" 
+          />
+        </TouchableOpacity>
+
+        {isExpanded && (
+          <View style={styles.scheduleSectionBody}>
+            {/* 免疫规划（免费）疫苗 */}
+            {schedule.freeVaccines.length > 0 && (
+              <View style={styles.vaccineGroup}>
+                <View style={styles.groupHeader}>
+                  <Ionicons name="shield-checkmark" size={16} color="#34C759" />
+                  <Text style={styles.groupTitle}>
+                    免疫规划（免费）
+                    <Text style={styles.groupCount}> {freeCompleted}/{schedule.freeVaccines.length}</Text>
+                  </Text>
+                </View>
+                {schedule.freeVaccines.map(vaccine => renderVaccineItem(vaccine, schedule))}
+              </View>
+            )}
+
+            {/* 非免疫规划（自费）疫苗 */}
+            {schedule.paidVaccines.length > 0 && (
+              <View style={styles.vaccineGroup}>
+                <View style={styles.groupHeader}>
+                  <Ionicons name="card" size={16} color="#FF9500" />
+                  <Text style={styles.groupTitle}>
+                    非免疫规划（自费）
+                    <Text style={styles.groupCount}> {paidCompleted}/{schedule.paidVaccines.length}</Text>
+                  </Text>
+                </View>
+                {schedule.paidVaccines.map(vaccine => renderVaccineItem(vaccine, schedule))}
+              </View>
+            )}
+          </View>
+        )}
+      </View>
+    );
   };
 
   if (!currentBaby) {
@@ -98,12 +324,28 @@ export const VaccineListScreen: React.FC<VaccineListScreenProps> = ({ navigation
         >
           <Ionicons name="arrow-back" size={24} color="#007AFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>疫苗接种</Text>
+        <Text style={styles.headerTitle}>疫苗接种计划</Text>
         <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => navigation.navigate('AddVaccine')}
+          style={styles.infoButton}
+          onPress={() => {
+            Alert.alert(
+              '使用说明',
+              '📋 如何使用：\n' +
+              '• 点击疫苗名称添加接种记录\n' +
+              '• ✓ 表示已接种，可点击删除\n' +
+              '• ⚡ 表示已被其他疫苗替代\n' +
+              '• 免费疫苗为国家免疫规划项目\n' +
+              '• 自费疫苗价格仅供参考\n' +
+              '• 高亮显示当前推荐接种\n\n' +
+              '📚 数据来源：\n' +
+              '本疫苗接种计划参考中国国家免疫规划和非免疫规划疫苗接种指南。\n\n' +
+              '⚠️ 重要提示：\n' +
+              '具体接种时间和疫苗选择请咨询医生。',
+              [{ text: '知道了' }]
+            );
+          }}
         >
-          <Ionicons name="add" size={28} color="#007AFF" />
+          <Ionicons name="information-circle-outline" size={24} color="#007AFF" />
         </TouchableOpacity>
       </View>
 
@@ -113,69 +355,15 @@ export const VaccineListScreen: React.FC<VaccineListScreenProps> = ({ navigation
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        {vaccines.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Ionicons name="shield-checkmark-outline" size={64} color="#C7C7CC" />
-            <Text style={styles.emptyText}>暂无疫苗记录</Text>
-            <TouchableOpacity
-              style={styles.emptyButton}
-              onPress={() => navigation.navigate('AddVaccine')}
-            >
-              <Text style={styles.emptyButtonText}>添加第一条记录</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          vaccines.map((vaccine) => (
-            <View key={vaccine.id} style={styles.card}>
-              <View style={styles.cardHeader}>
-                <View style={styles.iconContainer}>
-                  <Ionicons name="shield-checkmark" size={24} color="#34C759" />
-                </View>
-                <View style={styles.cardTitleContainer}>
-                  <Text style={styles.cardTitle}>{vaccine.vaccineName}</Text>
-                  <Text style={styles.cardDate}>
-                    {format(new Date(vaccine.vaccinationDate), 'yyyy年MM月dd日', {
-                      locale: zhCN,
-                    })}
-                  </Text>
-                </View>
-                <TouchableOpacity
-                  style={styles.deleteButton}
-                  onPress={() => handleDelete(vaccine)}
-                >
-                  <Ionicons name="trash-outline" size={20} color="#FF3B30" />
-                </TouchableOpacity>
-              </View>
+        {/* 疫苗接种计划列表 */}
+        {VACCINE_SCHEDULE.map((schedule, index) => renderScheduleSection(schedule, index))}
 
-              <View style={styles.cardBody}>
-                {vaccine.doseNumber && (
-                  <View style={styles.detailRow}>
-                    <Ionicons name="medical" size={16} color="#8E8E93" />
-                    <Text style={styles.detailText}>第{vaccine.doseNumber}针</Text>
-                  </View>
-                )}
-                {vaccine.location && (
-                  <View style={styles.detailRow}>
-                    <Ionicons name="location" size={16} color="#8E8E93" />
-                    <Text style={styles.detailText}>{vaccine.location}</Text>
-                  </View>
-                )}
-                {vaccine.nextDate && (
-                  <View style={[styles.detailRow, styles.highlightRow]}>
-                    <Ionicons name="time" size={16} color="#FF9500" />
-                    <Text style={[styles.detailText, { color: '#FF9500' }]}>
-                      下次: {format(new Date(vaccine.nextDate), 'MM-dd', { locale: zhCN })}
-                    </Text>
-                  </View>
-                )}
-                {vaccine.notes && (
-                  <Text style={styles.notes}>{vaccine.notes}</Text>
-                )}
-              </View>
-            </View>
-          ))
-        )}
-        <View style={styles.footer} />
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>
+            ℹ️ 数据来源：中国国家免疫规划{'\n'}
+            具体接种时间请咨询医生
+          </Text>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -200,83 +388,205 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    flex: 1,
+    fontSize: 18,
+    fontWeight: '700',
     color: '#000',
+    textAlign: 'center',
   },
-  addButton: {
+  infoButton: {
     padding: 4,
   },
   content: {
     flex: 1,
+    paddingTop: 8,
   },
-  card: {
+  scheduleSection: {
     backgroundColor: '#FFFFFF',
     marginHorizontal: 16,
-    marginTop: 16,
+    marginTop: 12,
     borderRadius: 12,
+    overflow: 'hidden',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  scheduleSectionHighlighted: {
+    borderWidth: 2,
+    borderColor: '#007AFF',
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
   },
-  cardHeader: {
+  scheduleSectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F5F5F7',
+    backgroundColor: '#FAFAFA',
   },
-  iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#34C75915',
+  scheduleHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  ageCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#E3F2FD',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
   },
-  cardTitleContainer: {
+  ageCircleHighlighted: {
+    backgroundColor: '#007AFF',
+  },
+  ageLabel: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#000',
+  },
+  ageLabelHighlighted: {
+    color: '#007AFF',
+  },
+  checkupBadge: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FF9500',
+  },
+  completionText: {
+    fontSize: 12,
+    color: '#8E8E93',
+    marginTop: 2,
+  },
+  scheduleSectionBody: {
+    padding: 16,
+    paddingTop: 8,
+  },
+  vaccineGroup: {
+    marginBottom: 16,
+  },
+  groupHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  groupTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#000',
+    marginLeft: 6,
+  },
+  groupCount: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#8E8E93',
+  },
+  vaccineItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    backgroundColor: '#FAFAFA',
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  vaccineItemCompleted: {
+    backgroundColor: '#E8F5E9',
+  },
+  vaccineItemReplaced: {
+    backgroundColor: '#F5F5F7',
+    opacity: 0.7,
+  },
+  vaccineLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 2,
+    borderColor: '#C7C7CC',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+    marginTop: 2,
+  },
+  checkboxChecked: {
+    backgroundColor: '#34C759',
+    borderColor: '#34C759',
+  },
+  checkboxReplaced: {
+    backgroundColor: '#8E8E93',
+    borderColor: '#8E8E93',
+  },
+  replacedIcon: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  vaccineInfo: {
     flex: 1,
   },
-  cardTitle: {
-    fontSize: 16,
+  vaccineName: {
+    fontSize: 15,
     fontWeight: '600',
     color: '#000',
     marginBottom: 4,
   },
-  cardDate: {
-    fontSize: 14,
+  vaccineNameCompleted: {
+    color: '#34C759',
+  },
+  vaccineNameReplaced: {
     color: '#8E8E93',
+    textDecorationLine: 'line-through',
   },
-  deleteButton: {
-    padding: 8,
+  replacedNote: {
+    fontSize: 12,
+    color: '#8E8E93',
+    marginTop: 2,
+    fontStyle: 'italic',
   },
-  cardBody: {
-    padding: 16,
+  doseNumber: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#007AFF',
   },
-  detailRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
+  vaccineNote: {
+    fontSize: 12,
+    color: '#8E8E93',
+    marginTop: 2,
+    lineHeight: 16,
   },
-  highlightRow: {
-    backgroundColor: '#FF950015',
-    padding: 8,
-    borderRadius: 6,
+  vaccineAlternative: {
+    fontSize: 12,
+    color: '#FF9500',
+    marginTop: 4,
+    lineHeight: 16,
+  },
+  vaccineDate: {
+    fontSize: 12,
+    color: '#34C759',
     marginTop: 4,
   },
-  detailText: {
-    fontSize: 14,
-    color: '#8E8E93',
-    marginLeft: 8,
+  vaccineRight: {
+    alignItems: 'flex-end',
+    marginLeft: 12,
   },
-  notes: {
-    fontSize: 14,
-    color: '#8E8E93',
-    marginTop: 8,
-    lineHeight: 20,
+  priceTag: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#FF9500',
+    marginBottom: 4,
   },
   emptyContainer: {
     flex: 1,
@@ -288,21 +598,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#8E8E93',
     marginTop: 16,
-    marginBottom: 24,
-  },
-  emptyButton: {
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    backgroundColor: '#007AFF',
-    borderRadius: 8,
-  },
-  emptyButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
   },
   footer: {
-    height: 32,
+    padding: 20,
+    alignItems: 'center',
+  },
+  footerText: {
+    fontSize: 12,
+    color: '#8E8E93',
+    textAlign: 'center',
+    lineHeight: 18,
   },
 });
-

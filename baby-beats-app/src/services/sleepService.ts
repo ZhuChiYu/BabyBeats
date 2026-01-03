@@ -1,6 +1,7 @@
 import { Sleep } from '../types';
 import { getDatabase, generateId, getCurrentTimestamp } from '../database';
 import { syncManager } from './syncManager';
+import { validateAndFixBabyId } from '../utils/babyValidation';
 
 export class SleepService {
   // 创建睡眠记录
@@ -8,11 +9,15 @@ export class SleepService {
     const db = await getDatabase();
     const now = getCurrentTimestamp();
     
+    // 验证并修正 baby_id
+    const validBabyId = await validateAndFixBabyId(data.babyId);
+    
     // 自动计算时长（分钟）
     const duration = Math.floor((data.endTime - data.startTime) / 60000);
     
     const sleep: Sleep = {
       ...data,
+      babyId: validBabyId,
       duration,
       id: generateId(),
       createdAt: now,

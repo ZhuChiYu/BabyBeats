@@ -15,23 +15,30 @@ import { Ionicons } from '@expo/vector-icons';
 import { useBabyStore } from '../store/babyStore';
 import { VaccineService } from '../services/vaccineService';
 import { ModalHeader } from '../components/ModalHeader';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import { CustomDateTimePicker } from '../components/CustomDateTimePicker';
 import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
+import { VACCINE_SCHEDULE } from '../constants/vaccineSchedule';
 
 interface AddVaccineScreenProps {
   navigation: any;
+  route?: {
+    params?: {
+      defaultVaccineName?: string;
+      defaultDoseNumber?: number;
+    };
+  };
 }
 
-export const AddVaccineScreen: React.FC<AddVaccineScreenProps> = ({ navigation }) => {
+export const AddVaccineScreen: React.FC<AddVaccineScreenProps> = ({ navigation, route }) => {
   const { getCurrentBaby } = useBabyStore();
   const currentBaby = getCurrentBaby();
 
-  const [vaccineName, setVaccineName] = useState('');
+  const [vaccineName, setVaccineName] = useState(route?.params?.defaultVaccineName || '');
   const [showNamePicker, setShowNamePicker] = useState(false);
   const [vaccinationDate, setVaccinationDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [doseNumber, setDoseNumber] = useState('');
+  const [doseNumber, setDoseNumber] = useState(route?.params?.defaultDoseNumber?.toString() || '');
   const [location, setLocation] = useState('');
   const [batchNumber, setBatchNumber] = useState('');
   const [nextDate, setNextDate] = useState<Date | null>(null);
@@ -39,8 +46,42 @@ export const AddVaccineScreen: React.FC<AddVaccineScreenProps> = ({ navigation }
   const [reminderEnabled, setReminderEnabled] = useState(true);
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
+  const [searchText, setSearchText] = useState('');
 
-  const commonVaccines = VaccineService.getCommonVaccines();
+  // 从疫苗接种计划中获取所有疫苗
+  const getAllVaccines = () => {
+    const vaccineMap = new Map<string, { name: string; description: string; isFree: boolean }>();
+    
+    VACCINE_SCHEDULE.forEach(schedule => {
+      schedule.freeVaccines.forEach(v => {
+        if (!vaccineMap.has(v.name)) {
+          vaccineMap.set(v.name, {
+            name: v.name,
+            description: v.note || `${schedule.ageLabel}接种`,
+            isFree: true,
+          });
+        }
+      });
+      schedule.paidVaccines.forEach(v => {
+        if (!vaccineMap.has(v.name)) {
+          vaccineMap.set(v.name, {
+            name: v.name,
+            description: v.note || `${schedule.ageLabel}接种（自费）`,
+            isFree: false,
+          });
+        }
+      });
+    });
+    
+    return Array.from(vaccineMap.values()).sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'));
+  };
+
+  const allVaccines = getAllVaccines();
+  
+  // 根据搜索文本过滤疫苗
+  const filteredVaccines = searchText
+    ? allVaccines.filter(v => v.name.includes(searchText))
+    : allVaccines;
 
   const handleSave = async () => {
     if (!currentBaby) {
@@ -124,25 +165,55 @@ export const AddVaccineScreen: React.FC<AddVaccineScreenProps> = ({ navigation }
             <View style={styles.picker}>
               <TextInput
                 style={styles.searchInput}
-                value={vaccineName}
-                onChangeText={setVaccineName}
-                placeholder="搜索或输入疫苗名称"
+                value={searchText}
+                onChangeText={setSearchText}
+                placeholder="搜索疫苗名称"
                 placeholderTextColor="#C7C7CC"
               />
               <ScrollView style={styles.pickerList}>
-                {commonVaccines.map((vaccine, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    style={styles.pickerItem}
-                    onPress={() => {
-                      setVaccineName(vaccine.name);
-                      setShowNamePicker(false);
-                    }}
-                  >
-                    <Text style={styles.pickerItemName}>{vaccine.name}</Text>
-                    <Text style={styles.pickerItemDesc}>{vaccine.description}</Text>
-                  </TouchableOpacity>
-                ))}
+                {filteredVaccines.length > 0 ? (
+                  filteredVaccines.map((vaccine, index) => (
+                    <TouchableOpacity
+                      key={index}
+                      style={styles.pickerItem}
+                      onPress={() => {
+                        setVaccineName(vaccine.name);
+                        setShowNamePicker(false);
+                        setSearchText('');
+                      }}
+                    >
+                      <View style={styles.vaccineItemHeader}>
+                        <Text style={styles.pickerItemName}>{vaccine.name}</Text>
+                        {vaccine.isFree ? (
+                          <View style={styles.freeBadge}>
+                            <Text style={styles.freeBadgeText}>免费</Text>
+                          </View>
+                        ) : (
+                          <View style={styles.paidBadge}>
+                            <Text style={styles.paidBadgeText}>自费</Text>
+                          </View>
+                        )}
+                      </View>
+                      <Text style={styles.pickerItemDesc}>{vaccine.description}</Text>
+                    </TouchableOpacity>
+                  ))
+                ) : (
+                  <View style={styles.noResultContainer}>
+                    <Text style={styles.noResultText}>未找到匹配的疫苗</Text>
+                    <TouchableOpacity
+                      style={styles.customInputButton}
+                      onPress={() => {
+                        setVaccineName(searchText);
+                        setShowNamePicker(false);
+                        setSearchText('');
+                      }}
+                    >
+                      <Text style={styles.customInputButtonText}>
+                        使用自定义名称: {searchText}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
               </ScrollView>
             </View>
           )}
@@ -262,36 +333,29 @@ export const AddVaccineScreen: React.FC<AddVaccineScreenProps> = ({ navigation }
 
       </KeyboardAvoidingView>
 
-      {showDatePicker && (
-        <DateTimePicker
+      <CustomDateTimePicker
+        visible={showDatePicker}
+        mode="date"
           value={vaccinationDate}
-          mode="date"
-          display="spinner"
-          locale="zh-Hans-CN"
-          onChange={(event, selectedDate) => {
+        onConfirm={(date) => {
+          setVaccinationDate(date);
             setShowDatePicker(false);
-            if (selectedDate) {
-              setVaccinationDate(selectedDate);
-            }
           }}
+        onCancel={() => setShowDatePicker(false)}
+        maximumDate={new Date()}
         />
-      )}
 
-      {showNextDatePicker && (
-        <DateTimePicker
+      <CustomDateTimePicker
+        visible={showNextDatePicker}
+        mode="date"
           value={nextDate || new Date()}
-          mode="date"
-          display="spinner"
-          locale="zh-Hans-CN"
-          minimumDate={new Date()}
-          onChange={(event, selectedDate) => {
+        onConfirm={(date) => {
+          setNextDate(date);
             setShowNextDatePicker(false);
-            if (selectedDate) {
-              setNextDate(selectedDate);
-            }
           }}
+        onCancel={() => setShowNextDatePicker(false)}
+        minimumDate={new Date()}
         />
-      )}
     </SafeAreaView>
   );
 };
@@ -363,6 +427,54 @@ const styles = StyleSheet.create({
   pickerItemDesc: {
     fontSize: 13,
     color: '#8E8E93',
+  },
+  vaccineItemHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  freeBadge: {
+    backgroundColor: '#E8F5E9',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  freeBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#34C759',
+  },
+  paidBadge: {
+    backgroundColor: '#FFF3E0',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  paidBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#FF9500',
+  },
+  noResultContainer: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  noResultText: {
+    fontSize: 14,
+    color: '#8E8E93',
+    marginBottom: 12,
+  },
+  customInputButton: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  customInputButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
   dateButton: {
     flexDirection: 'row',
